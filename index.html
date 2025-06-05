@@ -3,166 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Watermarking Demo (Advanced Obfuscation)</title>
+    <title>Text Watermarking Tool for phpBB</title>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
-            margin: 0;
+            font-family: Arial, sans-serif;
+            margin: 20px;
             padding: 20px;
-            background-color: #f0f0f0;
-            color: #333;
         }
-        .container {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1, h2 {
-            color: #333;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-        textarea, .output-area {
+
+        textarea {
             width: 100%;
-            box-sizing: border-box;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            height: 150px;
             margin-bottom: 10px;
-            min-height: 100px; 
-            white-space: pre-wrap; 
-            word-wrap: break-word;
-            font-family: monospace; 
         }
-        #customWatermarkPhrases {
-            min-height: 80px;
+
+        .preview {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
         }
-        .output-area {
-            background-color: rgb(255, 252, 204); 
-            font-family: 'Inter', sans-serif; 
-            min-height: 150px;
+
+        .invisible-space-char {
+            color: #f9f9f9;
         }
-        button {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
-            margin-bottom:15px;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .output-area span {
-            line-height: 1.5;
-        }
-        label {
+
+        .invisible-paragraph-container {
             display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
+            line-height: 0.1px;
+            height: 0.1px;
+            overflow: hidden;
         }
-        /* For debugging: make invisible text visible */
-        /*
-        .output-area span.invisible-space-filler {
-            background-color: rgba(255, 100, 0, 0.3) !important; 
-            color: darkorange !important;
-            outline: 1px dotted darkorange;
-            font-size: 10px !important;
+
+        .invisible-fragment {
+            font-size: 1px;
         }
-        .output-area span.invisible-fragment,
-        .output-area span.invisible-prefix,
-        .output-area span.invisible-suffix {
-            background-color: rgba(255, 0, 0, 0.2) !important;
-            color: red !important;
-            outline: 1px dotted red;
-        }
-        .output-area .invisible-paragraph-container,
-        .output-area .invisible-sentence-container {
-             border: 1px dashed blue !important;
-             display: block !important; 
-             height: auto !important; line-height: normal !important; overflow: visible !important;
-        }
-        .output-area .invisible-paragraph-container span, 
-        .output-area .invisible-sentence-container span { 
-            font-size: 10px !important; 
-            background-color: rgba(0, 255, 0, 0.1) !important;
-            color: green !important;
-        }
-        */
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1>Text Watermarking Demo (Advanced Obfuscation)</h1>
-        <p>Input text with BBCode. Visible words may be split. Spaces may become short, sized, invisible alphanumeric strings. Newlines will be filled with invisible text to prevent visual double newlines.</p>
+    <h1>Text Watermarking Tool for phpBB</h1>
+    <label for="bbcodeInput">Original Text (with BBCode):</label>
+    <textarea id="bbcodeInput" placeholder="Paste your BBCode content here..."></textarea>
 
-        <label for="originalText">Original Text (with BBCode)</label>
-        <textarea id="originalText">[b]This is the first paragraph[/b] of a story. It has [i]multiple sentences[/i] and will be used to demonstrate the watermarking effect. Writers work hard on their creations.
+    <label for="watermarkPhrases">Custom Invisible Paragraph/Sentence Phrases (one per line):</label>
+    <textarea id="watermarkPhrases" placeholder="Enter custom invisible phrases..."></textarea>
 
-This is a [color=blue]second paragraph[/color], separated by a newline.
+    <button id="applyWatermark">Apply Watermark</button>
 
-This line comes after an intentional double newline in the source.
+    <div class="preview">
+        <h3>Watermarked HTML Preview:</h3>
+        <div id="htmlPreview"></div>
+    </div>
 
-Let's add a [u]third paragraph[/u] for good measure. More text means more opportunities for watermarks.
-The forum name is "MyCreativeSpace" and the author is "StoryTellerX".</textarea>
-
-        <label for="customWatermarkPhrases">Custom Invisible Paragraph/Sentence Phrases (one per line)</label>
-        <textarea id="customWatermarkPhrases" placeholder="e.g., Content from MyForum by UserX&#10;Please respect copyright."></textarea>
-
-
-        <button onclick="applyWatermark()">Apply Watermark</button>
-
-        <h2>Watermarked HTML Preview</h2>
-        <div id="watermarkedOutput" class="output-area">
-            HTML preview will appear here.
-        </div>
-
-        <h2>Watermarked BBCode Output (Forums)</h2>
-        <textarea id="bbCodeOutput" readonly placeholder="Watermarked BBCode will appear here..."></textarea>
+    <div class="preview">
+        <h3>Watermarked BBCode Output (Forums):</h3>
+        <textarea id="bbcodeOutput" readonly></textarea>
     </div>
 
     <script>
         const CONFIG = {
-            BACKGROUND_COLOR: { r: 255, g: 252, b: 204 },
-            TEXT_COLOR_BASE: { r: 5, g: 5, b: 5 },
-            COLOR_VARIATION: 2, 
-            TEXT_COLOR_VARIATION: 10,
-            
-            PROB_SPACE_TO_INVISIBLE_FILLER: 0.55, // Chance to replace a space
-            PROB_NEWLINE_TO_INVISIBLE_PARA: 0.70, // For single newlines
-            // Double newlines will ALWAYS get an invisible para.
-            PROB_ADD_END_PARA_INVISIBLE_SENTENCE: 0.45,
-
-            PROB_BREAK_VISIBLE_WORD: 0.50,      
-            MIN_WORD_LENGTH_TO_BREAK: 5,        
-            VISIBLE_WORD_BREAK_PROB_PER_CHAR: 0.3, 
-
-            PROB_VISIBLE_SPAN_PREFIX_INVISIBLE: 0.0, 
-            PROB_VISIBLE_SPAN_SUFFIX_INVISIBLE: 0.0,
-
-            SPACE_REPLACEMENT_ALPHANUMERIC_CHARS: "abcdefghijklmnopqrstuvwxyz0123456789",
-            MIN_SPACE_FILLER_LENGTH: 1,
-            MAX_SPACE_FILLER_LENGTH: 3,
-
-            // Default phrases if custom input is empty
+            BACKGROUND_COLOR: "#f9f9f9",
+            TEXT_COLOR_BASE: "#000000",
+            COLOR_VARIATION: 20,
+            TEXT_COLOR_VARIATION: 40,
+            PROB_SPACE_TO_INVISIBLE_CHAR: 0.1,
+            PROB_NEWLINE_TO_INVISIBLE_PARA: 0.1,
+            PROB_ADD_END_PARA_INVISIBLE_SENTENCE: 0.05,
+            PROB_BREAK_VISIBLE_WORD: 0.2,
+            MIN_WORD_LENGTH_TO_BREAK: 4,
+            MICRO_INVISIBLE_CHARS: ['.', '‚', ';', ':', '·'],
+            LOCALSTORAGE_KEY_CUSTOM_PHRASES: 'custom_watermark_phrases',
             DEFAULT_INVISIBLE_PARAGRAPH_CONTENT: [
-                "This content is originally from MyCreativeSpace forum, authored by StoryTellerX. Unauthorized reproduction is theft of intellectual property.",
-                "Property of StoryTellerX at MyCreativeSpace. Please respect copyright laws and author rights. Do not duplicate without permission.",
-                "If you are reading this specific string, this content may have been copied without permission from the MyCreativeSpace forums.",
-                "Source: MyCreativeSpace community forums. Author: StoryTellerX. Unique Content Identifier: XYZ123ABC-Timestamp.",
-                "This text is protected by advanced invisible watermarks. Original source: MyCreativeSpace. Please support original creators."
-            ],
-            LOCALSTORAGE_KEY_CUSTOM_PHRASES: "textWatermarkCustomPhrases"
+                "This is an invisible watermark paragraph.",
+                "Watermarking is a powerful anti-plagiarism tool."
+            ]
         };
 
-        function debounce(func, delay) {
-            let timeout;
-            return function(...args) {
-                const contex
+        // Load custom watermark phrases from localStorage
+        const loadCustomPhrases = () => {
+            const savedPhrases = localStorage.getItem(CONFIG.LOCALSTORAGE_KEY_CUSTOM_PHRASES);
+            return savedPhrases ? savedPhrases.split("\n") : CONFIG.DEFAULT_INVISIBLE_PARAGRAPH_CONTENT;
+        };
+
+        const customPhrases = loadCustomPhrases();
+
+        // Function to apply watermarking techniques
+        const applyWatermark = () => {
+            const inputText = document.getElementById("bbcodeInput").value;
+            const watermarkPhrasesInput = document.getElementById("watermarkPhrases").value;
+            const customPhrases = watermarkPhrasesInput ? watermarkPhrasesInput.split("\n") : loadCustomPhrases();
+
+            let outputText = inputText;
+
+            // Apply space character replacement
+            outputText = outputText.replace(/ /g, (match) => {
+                if (Math.random() < CONFIG.PROB_SPACE_TO_INVISIBLE_CHAR) {
+                    const symbol = CONFIG.MICRO_INVISIBLE_CHARS[Math.floor(Math.random() * CONFIG.MICRO_INVISIBLE_CHARS.length)];
+                    return `[color=${CONFIG.BACKGROUND_COLOR}]${symbol}[/color]`;
+                }
+                return match;
+            });
+
+            // Apply visible word breaking
+            outputText = outputText.replace(/\b\w{4,}\b/g, (word) => {
+                if (Math.random() < CONFIG.PROB_BREAK_VISIBLE_WORD) {
+                    const wordFragments = word.split('').map((char, idx) => {
+                        const colorVariation = Math.floor(Math.random() * CONFIG.TEXT_COLOR_VARIATION);
+                        const color = `#${(parseInt(CONFIG.TEXT_COLOR_BASE.slice(1), 16) + colorVariation).toString(16)}`;
+                        return `[color=${color}]${char}[/color]`;
+                    });
+                    return wordFragments.join('');
+                }
+                return word;
+            });
+
+            // Insert invisible paragraphs or sentences
+            if (Math.random() < CONFIG.PROB_NEWLINE_TO_INVISIBLE_PARA) {
+                const invisibleParagraph = customPhrases[Math.floor(Math.random() * customPhrases.length)];
+                const invisibleFragment = invisibleParagraph.split('').map((char) => {
+                    const colorVariation = Math.floor(Math.random() * CONFIG.TEXT_COLOR_VARIATION);
+                    const color = `#${(parseInt(CONFIG.BACKGROUND_COLOR.slice(1), 16) + colorVariation).toString(16)}`;
+                    return `[color=${color}][size=1]${char}[/size][/color]`;
+                }).join('');
+                outputText += `\n[size=1][color=${CONFIG.BACKGROUND_COLOR}]${invisibleFragment}[/color][/size]`;
+            }
+
+            // Preview the watermarked text
+            document.getElementById("htmlPreview").innerHTML = outputText;
+
+            // Output BBCode for phpBB
+            document.getElementById("bbcodeOutput").value = outputText;
+        };
+
+        // Event listener to trigger watermarking
+        document.getElementById("applyWatermark").addEventListener("click", applyWatermark);
+
+        // Store custom watermark phrases in localStorage
+        document.getElementById("watermarkPhrases").addEventListener("input", () => {
+            localStorage.setItem(CONFIG.LOCALSTORAGE_KEY_CUSTOM_PHRASES, document.getElementById("watermarkPhrases").value);
+        });
+    </script>
+</body>
+</html>
