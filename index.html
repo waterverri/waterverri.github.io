@@ -78,7 +78,7 @@
             outline: 1px solid orange !important;
             font-size: 16px !important; 
         }
-        .invisible-paragraph-container {
+        .invisible-paragraph-container { /* This outer span makes the block small in HTML preview */
             background-color: lightblue !important;
             color: navy !important; 
             outline: 1px solid blue !important;
@@ -86,13 +86,13 @@
             line-height: normal !important; 
             overflow: visible !important; 
         }
-        .invisible-fragment {
-            background-color: lightgreen !important;
-            color: darkmagenta !important;
+        .invisible-fragment { /* This span now holds the entire invisible phrase */
+            background-color: lightgreen !important; /* If you want to see the phrase itself */
+            color: darkmagenta !important; /* If you want to see the phrase itself */
             outline: 1px solid green !important;
         }
-        .word-fragment {
-            outline: 1px dashed magenta;
+        .sentence-segment-styled { 
+            outline: 1px dashed blueviolet; 
         }
         */
 
@@ -105,7 +105,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
                 <label for="originalText" class="block text-sm font-medium text-gray-700 mb-1">Original Text (with BBCode):</label>
-                <textarea id="originalText" rows="10" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 bg-gray-50" placeholder="[b]Example:[/b] Enter your [i]BBCode[/i] text here.&#10;It can span multiple lines.&#10;&#10;Including paragraph breaks."></textarea>
+                <textarea id="originalText" rows="10" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 bg-gray-50" placeholder="[b]Example:[/b] Enter your [i]BBCode[/i] text here. Sentence one. Sentence two! Q? Sentence three..."></textarea>
             </div>
             <div>
                 <label for="customPhrases" class="block text-sm font-medium text-gray-700 mb-1">Custom Invisible Paragraph/Sentence Phrases (one per line):</label>
@@ -144,7 +144,7 @@
             COLOR_VARIATION: 1, 
             TEXT_COLOR_VARIATION: 10, 
 
-            PROB_SPACE_TO_INVISIBLE_CHAR: 0.3, 
+            PROB_SPACE_TO_INVISIBLE_CHAR: 0.1, 
             PROB_NEWLINE_TO_INVISIBLE_PARA: 0.6, 
             PROB_ADD_END_PARA_INVISIBLE_SENTENCE: 0.8, 
 
@@ -217,49 +217,19 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // NEW Helper function to get text content length by stripping BBCode
         function getTextContentLength(bbcodeString) {
             if (bbcodeString === null || bbcodeString === undefined) return 0;
-            // This regex aims to remove [tag=value], [tag], and [/tag] style BBCode.
-            // It's a simplification and might not cover all complex/nested BBCode perfectly,
-            // but should be sufficient for length approximation.
             const textOnly = bbcodeString.replace(/\[[^\]]+\]/g, '');
             return textOnly.length;
         }
         
-        // --- Fragmentation Functions ---
+        // --- Processing Functions for Text Content ---
 
-        function _generateFragmentedSpansHtmlInvisible(text) {
-            let html = "";
-            const minFragmentLength = 1;
-            const maxFragmentLength = 3; 
-            let i = 0;
-            while (i < text.length) {
-                const fragmentLength = _getRandomInt(minFragmentLength, Math.min(maxFragmentLength, text.length - i));
-                const fragment = text.substring(i, i + fragmentLength);
-                if (fragment.length === 0) break; 
-                html += `<span class="invisible-fragment" style="color:${getInvisibleTextColor()};">${escapeHtml(fragment)}</span>`;
-                i += fragmentLength;
-            }
-            return html;
+        function _generateHtmlForInvisiblePhrase(text) {
+            if (!text || text.length === 0) return "";
+            return `<span class="invisible-fragment" style="color:${getInvisibleTextColor()};">${escapeHtml(text)}</span>`;
         }
-
-        function _generateFragmentedSpansHtmlVisible(text) {
-            let html = "";
-            let i = 0;
-            const baseStyle = ""; 
-
-            while (i < text.length) {
-                const fragmentLength = _getRandomInt(1, 2); 
-                const fragment = text.substring(i, Math.min(i + fragmentLength, text.length));
-                if (fragment.length === 0) break; 
-
-                html += `<span class="word-fragment" style="color:${getVisibleTextColor()}; ${baseStyle}">${escapeHtml(fragment)}</span>`;
-                i += fragment.length;
-            }
-            return html;
-        }
-
+        
 
         // --- LocalStorage for Custom Phrases ---
         let debounceTimeout;
@@ -292,22 +262,44 @@
         // --- Core Watermarking Logic ---
         function processTextNode(textNodeContent) {
             let processedHtml = "";
-            const wordsAndSpaces = textNodeContent.split(/(\s+)/); 
+            const sentenceRegex = /([^.!?]+(?:[.!?]+|$))|([^.!?]+$)/g;
+            let match;
+            const sentences = [];
+            while ((match = sentenceRegex.exec(textNodeContent)) !== null) {
+                if (match[1]) sentences.push(match[1]);
+                else if (match[2]) sentences.push(match[2]);
+            }
 
-            wordsAndSpaces.forEach(segment => {
-                if (segment.match(/^\s+$/)) { 
-                    for (let char of segment) { 
-                        if (char === ' ' && Math.random() < CONFIG.PROB_SPACE_TO_INVISIBLE_CHAR) {
-                            const invisibleChar = _getRandomElement(CONFIG.MICRO_INVISIBLE_CHARS);
-                            processedHtml += `<span class="invisible-space-char" style="color:${getInvisibleTextColor()};">${escapeHtml(invisibleChar)}</span>`;
-                        } else {
-                            processedHtml += escapeHtml(char); 
-                        }
-                    }
-                } else if (segment.length > 0) { 
-                    processedHtml += _generateFragmentedSpansHtmlVisible(segment);
+            if (sentences.length === 0 && textNodeContent.length > 0) {
+                sentences.push(textNodeContent);
+            }
+            
+            sentences.forEach(sentence => {
+                if (!sentence.trim()) { 
+                    processedHtml += sentence; 
+                    return;
                 }
+
+                let sentenceInnerHtml = "";
+                const wordsAndSpaces = sentence.split(/(\s+)/); 
+
+                wordsAndSpaces.forEach(segment => {
+                    if (segment.match(/^\s+$/)) { 
+                        for (let char of segment) { 
+                            if (char === ' ' && Math.random() < CONFIG.PROB_SPACE_TO_INVISIBLE_CHAR) {
+                                const invisibleChar = _getRandomElement(CONFIG.MICRO_INVISIBLE_CHARS);
+                                sentenceInnerHtml += `<span class="invisible-space-char" style="color:${getInvisibleTextColor()};">${escapeHtml(invisibleChar)}</span>`;
+                            } else {
+                                sentenceInnerHtml += escapeHtml(char); 
+                            }
+                        }
+                    } else if (segment.length > 0) { 
+                        sentenceInnerHtml += escapeHtml(segment); 
+                    }
+                });
+                processedHtml += `<span class="sentence-segment-styled" style="color:${getVisibleTextColor()};">${sentenceInnerHtml}</span>`;
             });
+
             return processedHtml;
         }
 
@@ -324,8 +316,10 @@
             }
             const phrase = _getRandomElement(availablePhrases); 
             
-            const fragmentedContent = _generateFragmentedSpansHtmlInvisible(phrase); 
-            return `<span class="invisible-paragraph-container" style="display:block; line-height:0.1px; height:0.1px; overflow:hidden;">${fragmentedContent}</span>`;
+            const styledInvisiblePhraseHtml = _generateHtmlForInvisiblePhrase(phrase); 
+            if (!styledInvisiblePhraseHtml) return "";
+
+            return `<span class="invisible-paragraph-container" style="display:block; line-height:0.1px; height:0.1px; overflow:hidden;">${styledInvisiblePhraseHtml}</span>`;
         }
         
         function applyWatermark() {
@@ -335,27 +329,39 @@
             let intermediateBbcode = ""; 
             
             const originalLines = originalBbcode.split('\n');
-            let maxOriginalTextContentLength = 0; // Changed variable name for clarity
+            let totalTextContentLength = 0;
+            let nonEmptyLinesCount = 0;
+
             if (originalLines.length > 0) {
-                // Calculate max length based on text content of original lines
-                maxOriginalTextContentLength = originalLines.reduce((max, line) => Math.max(max, getTextContentLength(line)), 0);
+                originalLines.forEach(line => {
+                    const textLength = getTextContentLength(line);
+                    if (textLength > 0) {
+                        totalTextContentLength += textLength;
+                        nonEmptyLinesCount++;
+                    }
+                });
             }
-            // Ensure idealLineLength is at least a moderate value for text content
-            const idealTextContentLineLength = Math.max(maxOriginalTextContentLength, 30); // Using 30 as a minimum for text content
-            console.log(`Calculated idealTextContentLineLength: ${idealTextContentLineLength} (maxOriginalTextContent: ${maxOriginalTextContentLength})`);
+            
+            let averageTextContentLength = 0;
+            if (nonEmptyLinesCount > 0) {
+                averageTextContentLength = totalTextContentLength / nonEmptyLinesCount;
+            }
+
+            const idealTextContentLineLength = Math.max(averageTextContentLength, 30); 
+            console.log(`Calculated idealTextContentLineLength (average of non-empty): ${idealTextContentLineLength.toFixed(2)} (TotalText: ${totalTextContentLength}, NonEmptyLines: ${nonEmptyLinesCount})`);
 
 
             const parts = originalBbcode.split(/(\[[^\]]+\]|\[\/[^\]]+\]|\n)/g);
             let previousPartEndedInNewline = false; 
 
             parts.forEach((part, index) => {
-                if (!part && part !== '\n') return; 
+                if (!part && part !== '\n') return; // Skip empty strings from split, but preserve newlines
 
-                if (part.match(/^\[[^\]]+\]$/) || part.match(/^\[\/[^\]]+\]$/)) { 
+                if (part.match(/^\[[^\]]+\]$/) || part.match(/^\[\/[^\]]+\]$/)) { // It's a BBCode tag
                     processedHtmlContent += escapeHtml(part); 
                     intermediateBbcode += part;
                     previousPartEndedInNewline = false; 
-                } else if (part === '\n') { 
+                } else if (part === '\n') { // It's an explicit newline character
                     processedHtmlContent += '\n';
                     intermediateBbcode += '\n';
 
@@ -375,11 +381,50 @@
                         }
                     }
                     previousPartEndedInNewline = true; 
-                } else { 
-                    const watermarkedTextHtml = processTextNode(part);
-                    processedHtmlContent += watermarkedTextHtml;
-                    intermediateBbcode += htmlToBbcode(watermarkedTextHtml);
-                    previousPartEndedInNewline = false; 
+                } else { // Text segment
+                    let isContentOfExemptTag = false;
+                    if (index > 0 && index < parts.length - 1) {
+                        const prevPart = parts[index - 1];
+                        const nextPart = parts[index + 1];
+
+                        // Regex for opening tags whose content should NOT get additional sentence-level coloring.
+                        const exemptOpeningTagRegex = /^\[(b|i|u|s|strike|sub|sup|size=\d+|font=[^\]]+|color=(?:#[0-9a-fA-F]{3,6}|[a-zA-Z]+)|url(?:=[^\]]+)?)\]$/i;
+                        // Regex for corresponding closing tags.
+                        const exemptClosingTagRegex = /^\[\/(b|i|u|s|strike|sub|sup|size|font|color|url)\]$/i;
+
+                        const openTagMatch = prevPart.match(exemptOpeningTagRegex);
+                        const closeTagMatch = nextPart.match(exemptClosingTagRegex);
+
+                        if (openTagMatch && closeTagMatch) {
+                            let openTagName = openTagMatch[1].toLowerCase();
+                            // Normalize tag names for comparison
+                            if (openTagName.startsWith('size=')) openTagName = 'size';
+                            else if (openTagName.startsWith('font=')) openTagName = 'font';
+                            else if (openTagName.startsWith('color=')) openTagName = 'color';
+                            else if (openTagName.startsWith('url=')) openTagName = 'url';
+                            // No change for b, i, u, s, strike, sub, sup, url (without value)
+
+                            const closeTagName = closeTagMatch[1].toLowerCase();
+
+                            if (openTagName === closeTagName) {
+                                isContentOfExemptTag = true;
+                            }
+                        }
+                    }
+
+                    if (isContentOfExemptTag) {
+                        // Preserve content as is, it's already styled by an outer tag.
+                        processedHtmlContent += escapeHtml(part); // For HTML preview, just show the text
+                        intermediateBbcode += part; // For BBCode output, keep the raw text
+                        console.log(`applyWatermark: Text part "${part.substring(0,30)}..." is content of exempt tag, preserving raw.`);
+                    } else {
+                        // Not inside an exempt tag, apply sentence-level styling.
+                        const watermarkedTextHtml = processTextNode(part);
+                        processedHtmlContent += watermarkedTextHtml;
+                        intermediateBbcode += htmlToBbcode(watermarkedTextHtml);
+                        console.log(`applyWatermark: Text part "${part.substring(0,30)}..." processed by processTextNode.`);
+                    }
+                    previousPartEndedInNewline = false;
                 }
             });
 
@@ -392,8 +437,7 @@
             }
 
             console.log("Intermediate BBCode before padding:\n", intermediateBbcode);
-            // Pass the ideal TEXT CONTENT length
-            const finalBbcode = padLinesToIdealLength(intermediateBbcode, idealTextContentLineLength); 
+            const finalBbcode = padLinesToIdealLength(intermediateBbcode, Math.round(idealTextContentLineLength)); 
 
             document.getElementById('htmlPreview').innerHTML = processedHtmlContent;
             document.getElementById('bbcodeOutput').value = finalBbcode;
@@ -405,7 +449,7 @@
             console.log("  PADDING_LOG: " + message);
         }
 
-        function padLinesToIdealLength(bbcodeString, idealTextContentLength) { // Parameter name changed
+        function padLinesToIdealLength(bbcodeString, idealTextContentLength) { 
             logPaddingMessage(`--- padLinesToIdealLength START (ideal TEXT CONTENT length: ${idealTextContentLength}) ---`);
             const lines = bbcodeString.split('\n');
             const paddedLines = [];
@@ -418,43 +462,48 @@
                 logPaddingMessage(`\n[Line ${lineIndex} START] Original line: "${line}" (RawLength: ${line.length}, TextContentLength: ${currentTextContentLength})`);
                 
                 let loopCount = 0; 
-                // Loop based on TEXT CONTENT length
                 while (currentTextContentLength < idealTextContentLength) { 
                     loopCount++;
+                    if (loopCount > 200 && idealTextContentLength > 500) { 
+                        logPaddingMessage(`  [L${lineIndex} Loop ${loopCount}] Exceeded 200 padding iterations for a long ideal length. Breaking to prevent freeze.`);
+                        break;
+                    }
+                     if (loopCount > 500 ) { 
+                        logPaddingMessage(`  [L${lineIndex} Loop ${loopCount}] Exceeded 500 padding iterations. Breaking to prevent freeze.`);
+                        break;
+                    }
+
                     logPaddingMessage(`  [L${lineIndex} Loop ${loopCount}] Current TextContentLength: ${currentTextContentLength}, Ideal: ${idealTextContentLength}`);
                     
                     let paddingSegmentBbcode = "";
-                    const invisibleHtml = generateInvisibleParagraphHtml();
-                    logPaddingMessage(`    [L${lineIndex} Loop ${loopCount}] Generated invisibleHTML: ${invisibleHtml ? "Present" : "EMPTY"}`);
+                    const invisibleHtml = generateInvisibleParagraphHtml(); 
+                    logPaddingMessage(`    [L${lineIndex} Loop ${loopCount}] Generated invisibleHTML for padding: ${invisibleHtml ? "Present" : "EMPTY"}`);
 
                     if (invisibleHtml) {
                         paddingSegmentBbcode = htmlToBbcode(invisibleHtml);
                         logPaddingMessage(`    [L${lineIndex} Loop ${loopCount}] Padding BBCode (RawLength ${paddingSegmentBbcode.length}, TextContentLength ${getTextContentLength(paddingSegmentBbcode)}): "${paddingSegmentBbcode.substring(0,50)}..."`);
                     }
 
-                    if (!invisibleHtml || !paddingSegmentBbcode || getTextContentLength(paddingSegmentBbcode) === 0) { // Check text content of padding
+                    if (!invisibleHtml || !paddingSegmentBbcode || getTextContentLength(paddingSegmentBbcode) === 0) { 
                         logPaddingMessage(`    [L${lineIndex} Loop ${loopCount}] No valid phrase/HTML or padding BBCode has no text content. Trying minimal default.`);
-                        currentTextContentLength = getTextContentLength(currentLine); // Re-check before adding minimal
+                        currentTextContentLength = getTextContentLength(currentLine); 
                         if (currentTextContentLength < idealTextContentLength) {
                             const invisibleHexColor = getInvisibleTextColorHex();
                             const minimalPadding = `[color=${invisibleHexColor}]${CONFIG.MINIMAL_DEFAULT_INVISIBLE_CHAR}[/color]`;
-                            currentLine += minimalPadding; // Add minimal padding
-                            currentTextContentLength = getTextContentLength(currentLine); // Update text content length
+                            currentLine += minimalPadding; 
+                            currentTextContentLength = getTextContentLength(currentLine); 
                             logPaddingMessage(`      [L${lineIndex} Loop ${loopCount}] Using minimal default. New TextContentLength: ${currentTextContentLength}`);
-                            // If even minimal default doesn't increase text length enough or ideal is 0, break.
                             if (getTextContentLength(minimalPadding) === 0 && idealTextContentLength > 0) {
                                 logPaddingMessage(`      [L${lineIndex} Loop ${loopCount}] Minimal default has no text content. Breaking to avoid infinite loop.`);
                                 break;
                             }
-                            // If after adding minimal, we are still short, the loop will continue. If minimal made it long enough, it will break next.
-
                         } else {
                              logPaddingMessage(`      [L${lineIndex} Loop ${loopCount}] Line already meets/exceeds ideal text content length. Breaking.`);
                             break; 
                         }
                     } else {
                         currentLine += paddingSegmentBbcode;
-                        currentTextContentLength = getTextContentLength(currentLine); // Update after adding segment
+                        currentTextContentLength = getTextContentLength(currentLine); 
                     }
                     logPaddingMessage(`    [L${lineIndex} Loop ${loopCount}] Line after adding segment (New RawLength ${currentLine.length}, New TextContentLength ${currentTextContentLength}): "${currentLine.substring(0, 100)}${currentLine.length > 100 ? "..." : ""}"`);
                 }
@@ -490,7 +539,9 @@
                     let prefix = "";
                     let suffix = "";
 
-                    if (hexColor) {
+                    if (hexColor && (child.classList.contains('sentence-segment-styled') || 
+                                     child.classList.contains('invisible-fragment') || 
+                                     child.classList.contains('invisible-space-char'))) {
                         prefix += `[color=${hexColor}]`;
                         suffix = `[/color]` + suffix;
                     }
