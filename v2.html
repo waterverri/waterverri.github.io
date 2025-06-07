@@ -84,7 +84,7 @@
     <div class="container mx-auto p-4 md:p-8 my-8 bg-white rounded-lg shadow-2xl">
         <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 text-gray-800">Waterverri's Advanced Text Watermarking Tool</h1>
         <p class="text-center text-gray-600 mb-8">Versi definitif dengan logika backtracking acak yang benar dan tag orisinal yang terjaga.</p>
-        <p>v2.1.5</p>
+        <p>v2.1.6</p>
 
         <div id="config-container" class="mb-8">
             <fieldset>
@@ -255,35 +255,6 @@
             }
         }
 
-        /**
-         * Calculates Green and Blue values to maintain a color ratio
-         * similar to #FFFCCC, based on a given Red value.
-         *
-         * @param {number} r - The Red component value (ideally between 0 and 255).
-         * @returns {{g: number, b: number}} An object containing the calculated Green and Blue values.
-         */
-        function getProportionalGandB(r) {
-          // Ratios from the original color #FFFCCC (R:255, G:252, B:204)
-
-          // R delta from original value
-          const rdelta = 255-r;
-          
-          const greenRatio = 252 / 255; // ~0.988
-          const blueRatio = 204 / 255;  // 0.8
-        
-          // Calculate g and b based on the input r
-          let gdelta = Math.round(rdelta * greenRatio);
-          let bdelta = Math.round(rdelta * blueRatio);
-          let g = _getRandomInt(252-gdelta, 252);
-          let b = _getRandomInt(240-bdelta, 252);
-        
-          // Return rounded integer values, as RGB components must be integers
-          return {
-            g: Math.round(g),
-            b: Math.round(b)
-          };
-        }
-
         // --- COLOR GENERATION ---
         function getVisibleColorHex() {
             if (LIVE_CONFIG.useOverlappingColors) {
@@ -300,7 +271,7 @@
 
         function getInvisibleColorHex() {
             if (LIVE_CONFIG.useOverlappingColors) {
-                const r = _getRandomInt(204, 255); const { g, b } = getProportionalGandB(r);
+                const r = _getRandomInt(204, 255); const g = _getRandomInt(246, 255); const b = _getRandomInt(235, 250);
                 return _rgbToHex(r, g, b);
             }
             const base = STATIC_CONFIG.BACKGROUND_COLOR;
