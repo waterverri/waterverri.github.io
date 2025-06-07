@@ -257,7 +257,7 @@
         // --- COLOR GENERATION ---
         function getVisibleColorHex() {
             if (LIVE_CONFIG.useOverlappingColors) {
-                const r = _getRandomInt(100, 190); const g = _getRandomInt(0, 80); const b = _getRandomInt(0, 80);
+                const r = _getRandomInt(0, 255); const g = _getRandomInt(0, 64); const b = _getRandomInt(0, 64);
                 return _rgbToHex(r, g, b);
             }
             const base = STATIC_CONFIG.TEXT_COLOR_BASE;
@@ -270,7 +270,7 @@
 
         function getInvisibleColorHex() {
             if (LIVE_CONFIG.useOverlappingColors) {
-                const r = _getRandomInt(160, 255); const g = _getRandomInt(240, 255); const b = _getRandomInt(240, 255);
+                const r = _getRandomInt(204, 255); const g = _getRandomInt(240, 255); const b = _getRandomInt(240, 255);
                 return _rgbToHex(r, g, b);
             }
             const base = STATIC_CONFIG.BACKGROUND_COLOR;
