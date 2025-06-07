@@ -254,10 +254,33 @@
             }
         }
 
+        /**
+         * Calculates Green and Blue values to maintain a color ratio
+         * similar to #FFFCCC, based on a given Red value.
+         *
+         * @param {number} r - The Red component value (ideally between 0 and 255).
+         * @returns {{g: number, b: number}} An object containing the calculated Green and Blue values.
+         */
+        function getProportionalGandB(r) {
+          // Ratios from the original color #FFFCCC (R:255, G:252, B:204)
+          const greenRatio = 252 / 255; // ~0.988
+          const blueRatio = 204 / 255;  // 0.8
+        
+          // Calculate g and b based on the input r
+          let g = r * greenRatio;
+          let b = r * blueRatio;
+        
+          // Return rounded integer values, as RGB components must be integers
+          return {
+            g: Math.round(g),
+            b: Math.round(b)
+          };
+        }
+
         // --- COLOR GENERATION ---
         function getVisibleColorHex() {
             if (LIVE_CONFIG.useOverlappingColors) {
-                const r = _getRandomInt(0, 255); const g = _getRandomInt(0, 64); const b = _getRandomInt(0, 64);
+                const r = _getRandomInt(0, 255); const g = _getRandomInt(0, Math.floor(r/8)); const b = _getRandomInt(0, r/8);
                 return _rgbToHex(r, g, b);
             }
             const base = STATIC_CONFIG.TEXT_COLOR_BASE;
@@ -270,7 +293,7 @@
 
         function getInvisibleColorHex() {
             if (LIVE_CONFIG.useOverlappingColors) {
-                const r = _getRandomInt(204, 255); const g = _getRandomInt(240, 255); const b = _getRandomInt(240, 255);
+                const r = _getRandomInt(204, 255); const { g, b } = getProportionalGandB(r);
                 return _rgbToHex(r, g, b);
             }
             const base = STATIC_CONFIG.BACKGROUND_COLOR;
