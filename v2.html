@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Waterverri's Advanced BBCode Text Watermarker v2.7</title>
+    <title>Waterverri's Advanced BBCode Text Watermarker v2.8 (Bugfix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
@@ -41,7 +41,7 @@
 <body class="bg-gray-100">
     <div class="container mx-auto p-4 md:p-8 my-8 bg-white rounded-lg shadow-2xl">
         <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 text-gray-800">Waterverri's Advanced Text Watermarking Tool</h1>
-        <p class="text-center text-gray-600 mb-8">v2.7: Pemisahan output berbasis baris baru & UI yang lebih bersih.</p>
+        <p class="text-center text-gray-600 mb-8">v2.8: Perbaikan bug kritikal hilangnya baris.</p>
 
         <div id="config-container" class="mb-8">
             <fieldset>
@@ -357,17 +357,38 @@
                     }
                 }
 
-                let finalLine = processedContentBbcode;
-                if (!isLineEmpty) {
+                // --- [BUGFIX] Correct line reconstruction ---
+                const finalLineParts = [];
+                if(isLineEmpty) {
+                    finalLineParts.push(processedContentBbcode);
+                } else {
                     const lineParts = line.split(/(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)/g).filter(Boolean);
-                    const tagsOnly = lineParts.filter(p => p.match(/^(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)$/)).join('');
-                    finalLine = tagsOnly.replace(/\[\/[^\]]+\]/, processedContentBbcode + '$&');
+                    let textPlaced = false;
+                    lineParts.forEach(part => {
+                        if (part.match(/^(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)$/)) {
+                            finalLineParts.push(part); // Keep tag
+                        } else {
+                            if (!textPlaced && part.trim() !== '') { // Only place content once for non-empty text parts
+                                finalLineParts.push(processedContentBbcode);
+                                textPlaced = true;
+                            } else if (textPlaced) {
+                                // Do nothing, all text content has been replaced by the single processed block
+                            } else {
+                                finalLineParts.push(part); // Preserve whitespace-only parts if they come before main text
+                            }
+                        }
+                    });
+                     if (!textPlaced) { // Handle cases where a line might only contain tags and no text
+                        finalLineParts.push(processedContentBbcode);
+                    }
                 }
+                
+                let finalLine = finalLineParts.join('');
 
-                // Re-insert placeholder tags
                 originalSizeTags.forEach((value, key) => {
                     finalLine = finalLine.replace(new RegExp(key, 'g'), value);
                 });
+
                 return finalLine;
             });
 
@@ -375,10 +396,11 @@
             displayFinalBbcode(bbcodeParts);
         }
         
-        // --- [NEW] Line-based Splitting Logic ---
+        // --- Line-based Splitting Logic ---
         function splitBbcodeByLine(lines) {
-            if (lines.join('\n').length < STATIC_CONFIG.MAX_BBCODE_LENGTH) {
-                return [lines.join('\n')];
+            const joined = lines.join('\n');
+            if (joined.length < STATIC_CONFIG.MAX_BBCODE_LENGTH) {
+                return [joined];
             }
 
             const parts = [];
@@ -387,7 +409,7 @@
 
             lines.forEach(line => {
                 const lineLength = line.length + 1; // +1 for the newline char
-                if (currentLength + lineLength > STATIC_CONFIG.MAX_BBCODE_LENGTH && currentPartLines.length > 0) {
+                if (currentLength > 0 && currentLength + lineLength > STATIC_CONFIG.MAX_BBCODE_LENGTH) {
                     parts.push(currentPartLines.join('\n'));
                     currentPartLines = [line];
                     currentLength = lineLength;
