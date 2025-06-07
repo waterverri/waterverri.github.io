@@ -84,7 +84,7 @@
     <div class="container mx-auto p-4 md:p-8 my-8 bg-white rounded-lg shadow-2xl">
         <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 text-gray-800">Waterverri's Advanced Text Watermarking Tool</h1>
         <p class="text-center text-gray-600 mb-8">Versi definitif dengan logika backtracking acak yang benar dan tag orisinal yang terjaga.</p>
-        <p>v2.1.6</p>
+        <p>v2.2.0</p>
 
         <div id="config-container" class="mb-8">
             <fieldset>
@@ -346,7 +346,7 @@
             }
         }
 
-        // --- [FULLY CORRECTED] CORE LOGIC ---
+        // --- CORE PROCESSING LOGIC ---
         function processTextNode(textNodeContent) {
             // Path for advanced, hierarchical obfuscation.
             if (LIVE_CONFIG.useSpanObfuscation) {
@@ -406,12 +406,13 @@
             return generateHierarchicalSpans(phrase, false, randomDepth, true);
         }
         
-        // --- MAIN APPLICATION FLOW ---
+        // --- [NEW] MAIN APPLICATION FLOW ---
         function applyWatermark() {
             let originalBbcode = document.getElementById('originalText').value;
             const originalSizeTags = new Map();
             let placeholderIndex = 0;
             
+            // Preserve [size] tags by replacing them with placeholders
             originalBbcode = originalBbcode.replace(/\[size=[\d]+\][\s\S]*?\[\/size\]/gi, (match) => {
                 const placeholder = `__SIZE_PLACEHOLDER_${placeholderIndex}__`;
                 originalSizeTags.set(placeholder, match);
@@ -429,59 +430,104 @@
                     nonEmptyLinesCount++;
                 }
             });
-            const idealTextContentLength = ((nonEmptyLinesCount > 0) ? Math.round(totalTextContentLength / nonEmptyLinesCount) : 30) * LIVE_CONFIG.idealLineLengthMultiplier;
             
+            const idealTextContentLength = ((nonEmptyLinesCount > 0) ? Math.round(totalTextContentLength / nonEmptyLinesCount) : 30) * LIVE_CONFIG.idealLineLengthMultiplier;
+
+            // Process each line according to the new logic
             const processedLines = originalLines.map(line => {
-                let processedLine = "";
-                const parts = line.split(/(\[.+?\])/g).filter(Boolean);
-                parts.forEach(part => {
-                     if (part.match(/^__/)) {
-                        processedLine += part;
-                    } else if (part.match(/^\[.+?\]$/)) {
-                        processedLine += part;
+                const currentLength = getTextContentLength(line);
+                const needsPadding = currentLength < idealTextContentLength;
+                const isLineEmpty = line.trim() === '';
+
+                const lineParts = line.split(/(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)/g).filter(Boolean);
+                const textToProcess = lineParts.filter(p => !p.match(/^(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)$/)).join('');
+
+                let processedContentBbcode = '';
+
+                // BEHAVIOR 3B: Empty line that needs padding
+                if (needsPadding && isLineEmpty) {
+                    let paddingContent = "";
+                    let safetyBreak = 0;
+                    while (getTextContentLength(paddingContent) < idealTextContentLength && safetyBreak < 50) {
+                        const customPhrases = document.getElementById('customPhrases').value.split('\n').map(p => p.trim()).filter(Boolean);
+                        const phraseSource = customPhrases.length > 0 ? customPhrases : STATIC_CONFIG.DEFAULT_INVISIBLE_PHRASES;
+                        if (phraseSource.length === 0) break;
+                        paddingContent += _getRandomElement(phraseSource) + " ";
+                        safetyBreak++;
+                    }
+                    const paddingHtml = generateHierarchicalSpans(paddingContent, false, LIVE_CONFIG.spanObfuscationDepth, true);
+                    processedContentBbcode = htmlToBbcode(paddingHtml);
+                
+                // BEHAVIOR 3A: Non-empty line that needs padding
+                } else if (needsPadding && !isLineEmpty) {
+                    let paddingContent = "";
+                    let combinedLength = getTextContentLength(textToProcess);
+                    let safetyBreak = 0;
+                    while (combinedLength < idealTextContentLength && safetyBreak < 50) {
+                        const customPhrases = document.getElementById('customPhrases').value.split('\n').map(p => p.trim()).filter(Boolean);
+                        const phraseSource = customPhrases.length > 0 ? customPhrases : STATIC_CONFIG.DEFAULT_INVISIBLE_PHRASES;
+                        if (phraseSource.length === 0) break;
+                        const phrase = _getRandomElement(phraseSource) + " ";
+                        paddingContent += phrase;
+                        combinedLength += getTextContentLength(phrase);
+                        safetyBreak++;
+                    }
+                    const originalTextHtml = processTextNode(textToProcess);
+                    const paddingHtml = generateHierarchicalSpans(paddingContent, false, LIVE_CONFIG.spanObfuscationDepth, true);
+                    processedContentBbcode = htmlToBbcode(originalTextHtml + paddingHtml);
+                
+                // BEHAVIOR 3C: No padding needed or not a candidate for padding
+                } else {
+                    if (textToProcess.length > 0) {
+                        const originalTextHtml = processTextNode(textToProcess);
+                        processedContentBbcode = htmlToBbcode(originalTextHtml);
+                    }
+                }
+                
+                // --- Reconstruct the line ---
+                const finalLineParts = [];
+                let textPlaced = false;
+                lineParts.forEach(part => {
+                    if (part.match(/^(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)$/)) {
+                        finalLineParts.push(part); // It's a tag, keep it
                     } else {
-                        processedLine += htmlToBbcode(processTextNode(part));
+                        // This is a text part. Place the entire processed block here once.
+                        if (!textPlaced) {
+                            finalLineParts.push(processedContentBbcode);
+                            textPlaced = true;
+                        }
+                        // Ignore this and subsequent original text parts as they are now handled.
                     }
                 });
 
+                // Add random invisible paragraph based on probability
                 if(line.trim() && Math.random() < LIVE_CONFIG.probNewlinePara) {
-                    processedLine += htmlToBbcode(generateInvisibleParagraphHtml());
+                    finalLineParts.push(htmlToBbcode(generateInvisibleParagraphHtml()));
                 }
 
-                let currentLength = getTextContentLength(processedLine);
-                let safetyBreak = 0;
-                while (currentLength < idealTextContentLength && safetyBreak < 50) {
-                    const paddingHtml = generateInvisibleParagraphHtml();
-                    if (!paddingHtml) break;
-                    const paddingBbcode = htmlToBbcode(paddingHtml);
-                    processedLine += paddingBbcode;
-                    currentLength += getTextContentLength(paddingBbcode);
-                    if (getTextContentLength(paddingBbcode) === 0) {
-                         const minimalPadding = `[color=${getInvisibleColorHex()}]${STATIC_CONFIG.MINIMAL_DEFAULT_INVISIBLE_CHAR}[/color]`;
-                         processedLine += minimalPadding;
-                         currentLength = getTextContentLength(processedLine);
-                         if (getTextContentLength(minimalPadding) === 0) break;
-                    }
-                    safetyBreak++;
-                }
-                return processedLine;
+                return finalLineParts.join('');
             });
             
+            // Add final paragraph at the end of the whole text if needed
             if (!originalBbcode.trim().endsWith('\n') && originalBbcode.trim().length > 0 && Math.random() < LIVE_CONFIG.probEndPara) {
-                 processedLines[processedLines.length - 1] += htmlToBbcode(generateInvisibleParagraphHtml());
+                 if (processedLines.length > 0) {
+                     processedLines[processedLines.length - 1] += htmlToBbcode(generateInvisibleParagraphHtml());
+                 }
             }
 
             let finalBbcode = processedLines.join('\n');
             
+            // Restore the original [size] tags
             originalSizeTags.forEach((value, key) => {
                 finalBbcode = finalBbcode.replace(new RegExp(key, 'g'), value);
             });
 
+            // Update UI
             document.getElementById('htmlPreview').innerHTML = bbcodeToHtml(finalBbcode);
             document.getElementById('bbcodeOutput').value = finalBbcode;
             document.getElementById('copyStatus').textContent = '';
         }
-        
+
         // --- HTML <-> BBCode CONVERSION ---
         function htmlToBbcode(htmlString) {
             const tempDiv = document.createElement('div');
