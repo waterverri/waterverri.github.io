@@ -84,7 +84,7 @@
     <div class="container mx-auto p-4 md:p-8 my-8 bg-white rounded-lg shadow-2xl">
         <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 text-gray-800">Waterverri's Advanced Text Watermarking Tool</h1>
         <p class="text-center text-gray-600 mb-8">Versi definitif dengan logika backtracking acak yang benar dan tag orisinal yang terjaga.</p>
-        <p>v2.2.0</p>
+        <p>v2.5.0</p>
 
         <div id="config-container" class="mb-8">
             <fieldset>
@@ -281,6 +281,35 @@
             return _rgbToHex(r, g, b);
         }
 
+        // --- [NEW] Smart Split Function ---
+        function findCleanSplitPoint(text) {
+            if (text.length < 2) return Math.floor(text.length / 2);
+            
+            const rangeStart = Math.floor(text.length * 0.4);
+            const rangeEnd = Math.floor(text.length * 0.6);
+
+            const cleanBreakChars = [' ', '.', ',', '-'];
+            const possibleSplitIndices = [];
+
+            for (let i = rangeStart; i < rangeEnd; i++) {
+                if (cleanBreakChars.includes(text[i])) {
+                    possibleSplitIndices.push(i);
+                }
+            }
+            
+            if (possibleSplitIndices.length > 0) {
+                // If we found clean breaks, pick one randomly
+                return _getRandomElement(possibleSplitIndices);
+            } else {
+                // Fallback: no clean breaks found, pick a random point in the range
+                if (rangeStart < rangeEnd) {
+                    return _getRandomInt(rangeStart, rangeEnd);
+                }
+                // Final fallback for very short strings
+                return Math.floor(text.length / 2);
+            }
+        }
+
         // --- ADVANCED OBFUSCATION ---
         function generateHierarchicalSpans(text, shouldBeVisible, depth, parentMakesVisible) {
             // This is a LEAF node.
@@ -325,9 +354,9 @@
             // This is an INTERMEDIARY node.
             const nodeType = _getRandomElement(['size', 'colorShow', 'colorHide']);
             
-            const mid = Math.floor(text.length / 2);
-            const part1 = text.substring(0, mid);
-            const part2 = text.substring(mid);
+            const splitPoint = findCleanSplitPoint(text);
+            const part1 = text.substring(0, splitPoint);
+            const part2 = text.substring(splitPoint);
 
             let newParentMakesVisible;
             if (nodeType === 'size') {
@@ -345,74 +374,13 @@
                 return `<span style="color:${color};">${child1}${child2}</span>`;
             }
         }
-
-        // --- CORE PROCESSING LOGIC ---
-        function processTextNode(textNodeContent) {
-            // Path for advanced, hierarchical obfuscation.
-            if (LIVE_CONFIG.useSpanObfuscation) {
-                const maxDepth = LIVE_CONFIG.spanObfuscationDepth;
-                const randomDepth = _getRandomInt(1, maxDepth);
-                return generateHierarchicalSpans(textNodeContent, true, randomDepth, true);
-            }
-            
-            // Path for simple, non-hierarchical obfuscation.
-            let processedHtml = "";
-            const sentences = textNodeContent.match(/[^.!?]+(?:[.!?]+|$)/g) || [textNodeContent];
-
-            sentences.forEach(sentence => {
-                if (!sentence.trim()) { 
-                    processedHtml += sentence; 
-                    return; 
-                }
-
-                let finalSentenceHtml;
-                
-                // Single probability check PER SENTENCE.
-                if (Math.random() < LIVE_CONFIG.probSpaceToInvisible) {
-                    const spaceIndices = [];
-                    for(let i = 0; i < sentence.length; i++) {
-                        if (sentence[i] === ' ') spaceIndices.push(i);
-                    }
-
-                    if (spaceIndices.length > 0) {
-                        // A space exists. Pick ONE to replace.
-                        const indexToReplace = _getRandomElement(spaceIndices);
-                        const invisibleSyllable = _generateRandomSyllable();
-                        const invisibleColor = getInvisibleColorHex();
-                        const replacementHtml = `<span style="color:${invisibleColor};">${escapeHtml(invisibleSyllable)}</span>`;
-
-                        finalSentenceHtml = escapeHtml(sentence.substring(0, indexToReplace)) + replacementHtml + escapeHtml(sentence.substring(indexToReplace + 1));
-                    } else {
-                        finalSentenceHtml = escapeHtml(sentence);
-                    }
-                } else {
-                    finalSentenceHtml = escapeHtml(sentence);
-                }
-                
-                processedHtml += `<span style="color:${getVisibleColorHex()};">${finalSentenceHtml}</span>`;
-            });
-            return processedHtml;
-        }
-
-        function generateInvisibleParagraphHtml() {
-            const customPhrases = document.getElementById('customPhrases').value.split('\n').map(p => p.trim()).filter(Boolean);
-            const phraseSource = customPhrases.length > 0 ? customPhrases : STATIC_CONFIG.DEFAULT_INVISIBLE_PHRASES;
-            if (phraseSource.length === 0) return "";
-            const phrase = _getRandomElement(phraseSource);
-            if (!phrase) return "";
-
-            const maxDepth = LIVE_CONFIG.spanObfuscationDepth;
-            const randomDepth = _getRandomInt(1, maxDepth);
-            return generateHierarchicalSpans(phrase, false, randomDepth, true);
-        }
         
-        // --- [NEW] MAIN APPLICATION FLOW ---
+        // --- MAIN APPLICATION FLOW ---
         function applyWatermark() {
             let originalBbcode = document.getElementById('originalText').value;
             const originalSizeTags = new Map();
             let placeholderIndex = 0;
             
-            // Preserve [size] tags by replacing them with placeholders
             originalBbcode = originalBbcode.replace(/\[size=[\d]+\][\s\S]*?\[\/size\]/gi, (match) => {
                 const placeholder = `__SIZE_PLACEHOLDER_${placeholderIndex}__`;
                 originalSizeTags.set(placeholder, match);
@@ -433,19 +401,12 @@
             
             const idealTextContentLength = ((nonEmptyLinesCount > 0) ? Math.round(totalTextContentLength / nonEmptyLinesCount) : 30) * LIVE_CONFIG.idealLineLengthMultiplier;
 
-            // Process each line according to the new logic
             const processedLines = originalLines.map(line => {
-                const currentLength = getTextContentLength(line);
-                const needsPadding = currentLength < idealTextContentLength;
                 const isLineEmpty = line.trim() === '';
-
-                const lineParts = line.split(/(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)/g).filter(Boolean);
-                const textToProcess = lineParts.filter(p => !p.match(/^(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)$/)).join('');
-
                 let processedContentBbcode = '';
 
-                // BEHAVIOR 3B: Empty line that needs padding
-                if (needsPadding && isLineEmpty) {
+                // Case 3b: An empty line. c1 and c2 are always hidden.
+                if (isLineEmpty) {
                     let paddingContent = "";
                     let safetyBreak = 0;
                     while (getTextContentLength(paddingContent) < idealTextContentLength && safetyBreak < 50) {
@@ -455,74 +416,80 @@
                         paddingContent += _getRandomElement(phraseSource) + " ";
                         safetyBreak++;
                     }
-                    const paddingHtml = generateHierarchicalSpans(paddingContent, false, LIVE_CONFIG.spanObfuscationDepth, true);
-                    processedContentBbcode = htmlToBbcode(paddingHtml);
+
+                    const splitPoint = findCleanSplitPoint(paddingContent);
+                    const c1_text = paddingContent.substring(0, splitPoint);
+                    const c2_text = paddingContent.substring(splitPoint);
+
+                    const c1_html = generateHierarchicalSpans(c1_text, false, LIVE_CONFIG.spanObfuscationDepth, true);
+                    const c2_html = generateHierarchicalSpans(c2_text, false, LIVE_CONFIG.spanObfuscationDepth, true);
+                    processedContentBbcode = htmlToBbcode(c1_html + c2_html);
                 
-                // BEHAVIOR 3A: Non-empty line that needs padding
-                } else if (needsPadding && !isLineEmpty) {
-                    let paddingContent = "";
-                    let combinedLength = getTextContentLength(textToProcess);
-                    let safetyBreak = 0;
-                    while (combinedLength < idealTextContentLength && safetyBreak < 50) {
-                        const customPhrases = document.getElementById('customPhrases').value.split('\n').map(p => p.trim()).filter(Boolean);
-                        const phraseSource = customPhrases.length > 0 ? customPhrases : STATIC_CONFIG.DEFAULT_INVISIBLE_PHRASES;
-                        if (phraseSource.length === 0) break;
-                        const phrase = _getRandomElement(phraseSource) + " ";
-                        paddingContent += phrase;
-                        combinedLength += getTextContentLength(phrase);
-                        safetyBreak++;
-                    }
-                    const originalTextHtml = processTextNode(textToProcess);
-                    const paddingHtml = generateHierarchicalSpans(paddingContent, false, LIVE_CONFIG.spanObfuscationDepth, true);
-                    processedContentBbcode = htmlToBbcode(originalTextHtml + paddingHtml);
-                
-                // BEHAVIOR 3C: No padding needed or not a candidate for padding
-                } else {
-                    if (textToProcess.length > 0) {
-                        const originalTextHtml = processTextNode(textToProcess);
-                        processedContentBbcode = htmlToBbcode(originalTextHtml);
+                } else { // Non-empty lines
+                    const lineParts = line.split(/(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)/g).filter(Boolean);
+                    const textToProcess = lineParts.filter(p => !p.match(/^(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)$/)).join('');
+                    const needsPadding = getTextContentLength(textToProcess) < idealTextContentLength;
+
+                    // Case 3a: Non-empty line that needs padding. c1 is visible, c2 is hidden.
+                    if (needsPadding) {
+                        const c1_text = textToProcess;
+                        let c2_text = ""; // This will be the padding content.
+                        let currentLength = getTextContentLength(c1_text);
+                        let safetyBreak = 0;
+                        while(currentLength < idealTextContentLength && safetyBreak < 50) {
+                             const customPhrases = document.getElementById('customPhrases').value.split('\n').map(p => p.trim()).filter(Boolean);
+                             const phraseSource = customPhrases.length > 0 ? customPhrases : STATIC_CONFIG.DEFAULT_INVISIBLE_PHRASES;
+                             if (phraseSource.length === 0) break;
+                             const phrase = _getRandomElement(phraseSource) + " ";
+                             c2_text += phrase;
+                             currentLength += getTextContentLength(phrase);
+                             safetyBreak++;
+                        }
+                        
+                        const c1_html = generateHierarchicalSpans(c1_text, true, LIVE_CONFIG.spanObfuscationDepth, true);
+                        const c2_html = generateHierarchicalSpans(c2_text, false, LIVE_CONFIG.spanObfuscationDepth, true);
+                        processedContentBbcode = htmlToBbcode(c1_html + c2_html);
+                    
+                    // Case 3c: Non-empty line, no padding. c1 and c2 are always visible.
+                    } else {
+                        const splitPoint = findCleanSplitPoint(textToProcess);
+                        const c1_text = textToProcess.substring(0, splitPoint);
+                        const c2_text = textToProcess.substring(splitPoint);
+
+                        const c1_html = generateHierarchicalSpans(c1_text, true, LIVE_CONFIG.spanObfuscationDepth, true);
+                        const c2_html = generateHierarchicalSpans(c2_text, true, LIVE_CONFIG.spanObfuscationDepth, true);
+                        processedContentBbcode = htmlToBbcode(c1_html + c2_html);
                     }
                 }
-                
+
                 // --- Reconstruct the line ---
                 const finalLineParts = [];
-                let textPlaced = false;
-                lineParts.forEach(part => {
-                    if (part.match(/^(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)$/)) {
-                        finalLineParts.push(part); // It's a tag, keep it
-                    } else {
-                        // This is a text part. Place the entire processed block here once.
-                        if (!textPlaced) {
-                            finalLineParts.push(processedContentBbcode);
-                            textPlaced = true;
+                if(isLineEmpty) {
+                    finalLineParts.push(processedContentBbcode);
+                } else {
+                    const lineParts = line.split(/(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)/g).filter(Boolean);
+                    let textPlaced = false;
+                    lineParts.forEach(part => {
+                        if (part.match(/^(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)$/)) {
+                            finalLineParts.push(part);
+                        } else {
+                            if (!textPlaced) {
+                                finalLineParts.push(processedContentBbcode);
+                                textPlaced = true;
+                            }
                         }
-                        // Ignore this and subsequent original text parts as they are now handled.
-                    }
-                });
-
-                // Add random invisible paragraph based on probability
-                if(line.trim() && Math.random() < LIVE_CONFIG.probNewlinePara) {
-                    finalLineParts.push(htmlToBbcode(generateInvisibleParagraphHtml()));
+                    });
                 }
-
+                
                 return finalLineParts.join('');
             });
             
-            // Add final paragraph at the end of the whole text if needed
-            if (!originalBbcode.trim().endsWith('\n') && originalBbcode.trim().length > 0 && Math.random() < LIVE_CONFIG.probEndPara) {
-                 if (processedLines.length > 0) {
-                     processedLines[processedLines.length - 1] += htmlToBbcode(generateInvisibleParagraphHtml());
-                 }
-            }
-
             let finalBbcode = processedLines.join('\n');
             
-            // Restore the original [size] tags
             originalSizeTags.forEach((value, key) => {
                 finalBbcode = finalBbcode.replace(new RegExp(key, 'g'), value);
             });
 
-            // Update UI
             document.getElementById('htmlPreview').innerHTML = bbcodeToHtml(finalBbcode);
             document.getElementById('bbcodeOutput').value = finalBbcode;
             document.getElementById('copyStatus').textContent = '';
