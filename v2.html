@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Waterverri's Advanced BBCode Text Watermarker v23 (Logic Fully Corrected)</title>
+    <title>Waterverri's Advanced BBCode Text Watermarker v2.7</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
@@ -12,70 +12,28 @@
         fieldset { border: 1px solid #d1d5db; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; }
         legend { font-size: 1.25rem; font-weight: 600; padding: 0 0.5rem; color: #1f2937; }
         textarea { min-height: 200px; resize: vertical; }
-        #htmlPreview { background-color: #fffccc; }
 
         /* --- Tooltip Styles --- */
-        .tooltip-container {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-        }
-
+        .tooltip-container { position: relative; display: inline-flex; align-items: center; }
         .tooltip-trigger {
-            cursor: pointer;
-            margin-left: 8px;
-            color: #6b7280;
-            border: 1px solid #d1d5db;
-            border-radius: 9999px;
-            width: 20px;
-            height: 20px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 12px;
+            cursor: pointer; margin-left: 8px; color: #6b7280; border: 1px solid #d1d5db;
+            border-radius: 9999px; width: 20px; height: 20px; display: inline-flex;
+            align-items: center; justify-content: center; font-weight: bold; font-size: 12px;
             transition: all 0.2s ease-in-out;
         }
-
-        .tooltip-trigger:hover {
-            background-color: #e5e7eb;
-            color: #1f2937;
-        }
-
+        .tooltip-trigger:hover { background-color: #e5e7eb; color: #1f2937; }
         .tooltip {
-            position: absolute;
-            bottom: 125%; /* Position above the trigger */
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #1f2937;
-            color: #ffffff;
-            padding: 12px;
-            border-radius: 8px;
-            width: 300px;
-            z-index: 10;
-            visibility: hidden;
-            opacity: 0;
-            transition: opacity 0.2s, visibility 0.2s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            font-size: 14px;
-            line-height: 1.6;
+            position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+            background-color: #1f2937; color: #ffffff; padding: 12px; border-radius: 8px;
+            width: 300px; z-index: 10; visibility: hidden; opacity: 0;
+            transition: opacity 0.2s, visibility 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-size: 14px; line-height: 1.6;
         }
-        
         .tooltip::after {
-            content: "";
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            margin-left: -5px;
-            border-width: 5px;
-            border-style: solid;
-            border-color: #1f2937 transparent transparent transparent;
+            content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px;
+            border-width: 5px; border-style: solid; border-color: #1f2937 transparent transparent transparent;
         }
-
-        .tooltip-container:hover .tooltip {
-            visibility: visible;
-            opacity: 1;
-        }
+        .tooltip-container:hover .tooltip { visibility: visible; opacity: 1; }
         .tooltip-pro { color: #86efac; font-weight: bold; }
         .tooltip-con { color: #fca5a5; font-weight: bold; }
     </style>
@@ -83,19 +41,16 @@
 <body class="bg-gray-100">
     <div class="container mx-auto p-4 md:p-8 my-8 bg-white rounded-lg shadow-2xl">
         <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 text-gray-800">Waterverri's Advanced Text Watermarking Tool</h1>
-        <p class="text-center text-gray-600 mb-8">Versi definitif dengan logika backtracking acak yang benar dan tag orisinal yang terjaga.</p>
-        <p>v2.5.0</p>
+        <p class="text-center text-gray-600 mb-8">v2.7: Pemisahan output berbasis baris baru & UI yang lebih bersih.</p>
 
         <div id="config-container" class="mb-8">
             <fieldset>
                 <legend>Konfigurasi</legend>
-                <div id="controls-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-                    </div>
+                <div id="controls-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6"></div>
             </fieldset>
              <fieldset>
                 <legend>Obfuscation Tingkat Lanjut</legend>
-                 <div id="advanced-controls-grid" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                     </div>
+                 <div id="advanced-controls-grid" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6"></div>
             </fieldset>
         </div>
 
@@ -116,21 +71,9 @@
             </button>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
-                <h2 class="text-xl font-semibold text-gray-700 mb-2">Pratinjau HTML Watermark:</h2>
-                <div id="htmlPreview" class="preview-area p-3 border border-gray-300 rounded-md min-h-[150px] whitespace-pre-wrap break-words text-base">
-                    Pratinjau akan muncul di sini...
-                </div>
-            </div>
-            <div>
-                <h2 class="text-xl font-semibold text-gray-700 mb-2">Output BBCode Watermark:</h2>
-                <textarea id="bbcodeOutput" rows="10" readonly class="shadow-sm block w-full sm:text-sm border-gray-300 rounded-md p-2 bg-gray-100 cursor-copy" placeholder="BBCode yang di-watermark akan muncul di sini..."></textarea>
-                <button id="copyBbcodeBtn" class="mt-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow text-sm">
-                    Salin BBCode
-                </button>
-                <span id="copyStatus" class="ml-2 text-sm text-green-600 font-semibold"></span>
-            </div>
+        <div>
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">Output BBCode Watermark:</h2>
+             <div id="bbcode-outputs-container" class="space-y-4"></div>
         </div>
     </div>
 
@@ -143,7 +86,8 @@
             textColorVariation: { value: 6, min: 0, max: 50, step: 1, label: "Variasi Warna Teks Terlihat", help: "Mengatur seberapa jauh variasi warna teks dari hitam murni.<br><br><span class='tooltip-pro'>Pro:</span> Nilai tinggi membuat teks lebih sulit diseleksi secara manual.<br><span class='tooltip-con'>Kontra:</span> Jika terlalu tinggi, teks bisa terlihat berwarna-warni dan tidak alami." },
             idealLineLengthMultiplier: { value: 0.4, min: 0.1, max: 2.0, step: 0.1, label: "Pengali Panjang Baris Ideal", help: "Mengatur target panjang untuk setiap baris (termasuk yang kosong). 1.0 = panjang rata-rata.<br><br><span class='tooltip-pro'>Pro:</span> Nilai tinggi membuat semua baris terlihat sama padat, membingungkan bot.<br><span class='tooltip-con'>Kontra:</span> Meningkatkan jumlah karakter secara signifikan." },
             useSpanObfuscation: { value: true, label: "Aktifkan Obfuscation Span Hirarkis", help: "Mengaktifkan metode obfuscation paling canggih, menggunakan tumpukan tag `[color]` dan `[size]` yang acak.<br><br><span class='tooltip-pro'>Pro:</span> Pertahanan terkuat. Sangat sulit dibersihkan otomatis.<br><span class='tooltip-con'>Kontra:</span> Menghasilkan BBCode yang paling panjang dan kompleks." },
-            spanObfuscationDepth: { value: 1, min: 1, max: 8, step: 1, label: "Maks. Kedalaman Obfuscation Span", help: "Mengatur kedalaman maksimum dari struktur pohon span.<br><br><span class='tooltip-pro'>Pro:</span> Nilai tinggi membuat struktur pohon lebih dalam dan kompleks.<br><span class='tooltip-con'>Kontra:</span> Meningkatkan jumlah karakter secara eksponensial." },
+            spanObfuscationDepth: { value: 4, min: 1, max: 8, step: 1, label: "Maks. Kedalaman Obfuscation Span", help: "Mengatur kedalaman maksimum dari struktur pohon span.<br><br><span class='tooltip-pro'>Pro:</span> Nilai tinggi membuat struktur pohon lebih dalam dan kompleks.<br><span class='tooltip-con'>Kontra:</span> Meningkatkan jumlah karakter secara eksponensial." },
+            probEarlyTermination: { value: 0.4, min: 0, max: 1, step: 0.01, label: "Prob. Terminasi Dini", help: "Probabilitas sebuah node berhenti bercabang sebelum mencapai kedalaman maks.<br><br><span class='tooltip-pro'>Pro:</span> Menghasilkan struktur pohon yang lebih acak dan tidak seragam.<br><span class='tooltip-con'>Kontra:</span> Nilai terlalu tinggi akan mengurangi kompleksitas obfuscation secara keseluruhan." },
             probRedundantColor: { value: 0.5, min: 0, max: 1, step: 0.01, label: "Prob. Warna Redundan", help: "(Hanya aktif jika Obfuscation Hirarkis diaktifkan). Saat sebuah node daun seharusnya sudah memiliki visibilitas yang benar, ini adalah probabilitas untuk tetap memakai tag `[color]` (menambah noise) daripada tag `[size]` (memaksa backtracking).<br><br><span class='tooltip-pro'>Pro:</span> Menambah noise, membuat pola lebih sulit ditebak.<br><span class='tooltip-con'>Kontra:</span> Sedikit mengurangi efektivitas paksaan backtracking." },
             useOverlappingColors: { value: true, label: "Aktifkan Warna Anti-Regex Bertumpuk", help: "Mengubah palet warna sehingga teks terlihat dan tak terlihat bisa memiliki awalan HEX yang sama (misal #A...).<br><br><span class='tooltip-pro'>Pro:</span> Membuat pembersihan dengan regex sederhana menjadi hampir mustahil.<br><span class='tooltip-con'>Kontra:</span> Estetika teks mungkin sedikit terganggu (tidak murni hitam)."},
         };
@@ -156,6 +100,7 @@
             LOCALSTORAGE_KEY_CUSTOM_PHRASES: 'phpbbWatermarkerCustomPhrases',
             MINIMAL_DEFAULT_INVISIBLE_CHAR: "·",
             DEBOUNCE_DELAY: 500,
+            MAX_BBCODE_LENGTH: 99999,
         };
 
         // --- UI & HELPERS ---
@@ -164,7 +109,7 @@
             const advancedGrid = document.getElementById('advanced-controls-grid');
             Object.keys(DEFAULT_CONFIG).forEach(key => {
                 const setting = DEFAULT_CONFIG[key];
-                const isAdvanced = key.includes('use') || key.includes('Depth') || key.includes('probRedundant') || key.includes('Multiplier');
+                 const isAdvanced = ['useSpanObfuscation', 'spanObfuscationDepth', 'probEarlyTermination', 'probRedundantColor', 'useOverlappingColors'].includes(key);
                 const targetGrid = isAdvanced ? advancedGrid : controlsGrid;
                 
                 const controlWrapper = document.createElement('div');
@@ -210,7 +155,7 @@
                     control.className = 'w-1/2 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer';
                     const valueSpan = document.createElement('span');
                     valueSpan.id = `${key}-value`;
-                    valueSpan.textContent = setting.value.toFixed(1);
+                    valueSpan.textContent = parseFloat(setting.value).toFixed(setting.step < 1 ? 2 : 0);
                     valueSpan.className = 'range-value text-indigo-700';
                     const innerWrapper = document.createElement('div');
                     innerWrapper.className = 'flex items-center gap-2';
@@ -225,7 +170,8 @@
                 input.addEventListener('input', () => {
                     updateConfigFromUI();
                     if (input.type === 'range') {
-                         document.getElementById(`${input.id}-value`).textContent = parseFloat(input.value).toFixed(1);
+                         const setting = DEFAULT_CONFIG[input.id];
+                         document.getElementById(`${input.id}-value`).textContent = parseFloat(input.value).toFixed(setting.step < 1 ? 2 : 0);
                     }
                 });
             });
@@ -239,20 +185,15 @@
         function _getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
         function _getRandomElement(arr) { return arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : ''; }
         function _rgbToHex(r, g, b) { return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase(); }
-        function escapeHtml(unsafe) { return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
         function getTextContentLength(bbcodeString) { return (bbcodeString || '').replace(/\[[^\]]+\]/g, '').length; }
         
         function _generateRandomSyllable() {
             const vowels = 'aeiou'.split('');
             const consonants = 'bcdfghjklmnpqrstvwxyz'.split('');
             const type = Math.random();
-            if (type < 0.45) { // CVC
-                return _getRandomElement(consonants) + _getRandomElement(vowels) + _getRandomElement(consonants);
-            } else if (type < 0.9) { // CV
-                return _getRandomElement(consonants) + _getRandomElement(vowels);
-            } else { // VC
-                return _getRandomElement(vowels) + _getRandomElement(consonants);
-            }
+            if (type < 0.45) { return _getRandomElement(consonants) + _getRandomElement(vowels) + _getRandomElement(consonants); } 
+            else if (type < 0.9) { return _getRandomElement(consonants) + _getRandomElement(vowels); } 
+            else { return _getRandomElement(vowels) + _getRandomElement(consonants); }
         }
 
         // --- COLOR GENERATION ---
@@ -281,66 +222,41 @@
             return _rgbToHex(r, g, b);
         }
 
-        // --- [NEW] Smart Split Function ---
+        // --- Smart Split Function ---
         function findCleanSplitPoint(text) {
             if (text.length < 2) return Math.floor(text.length / 2);
-            
             const rangeStart = Math.floor(text.length * 0.4);
             const rangeEnd = Math.floor(text.length * 0.6);
-
             const cleanBreakChars = [' ', '.', ',', '-'];
             const possibleSplitIndices = [];
-
             for (let i = rangeStart; i < rangeEnd; i++) {
                 if (cleanBreakChars.includes(text[i])) {
                     possibleSplitIndices.push(i);
                 }
             }
-            
-            if (possibleSplitIndices.length > 0) {
-                // If we found clean breaks, pick one randomly
-                return _getRandomElement(possibleSplitIndices);
-            } else {
-                // Fallback: no clean breaks found, pick a random point in the range
-                if (rangeStart < rangeEnd) {
-                    return _getRandomInt(rangeStart, rangeEnd);
-                }
-                // Final fallback for very short strings
-                return Math.floor(text.length / 2);
-            }
+            if (possibleSplitIndices.length > 0) { return _getRandomElement(possibleSplitIndices); } 
+            else { return (rangeStart < rangeEnd) ? _getRandomInt(rangeStart, rangeEnd) : Math.floor(text.length / 2); }
         }
 
         // --- ADVANCED OBFUSCATION ---
         function generateHierarchicalSpans(text, shouldBeVisible, depth, parentMakesVisible) {
-            // This is a LEAF node.
-            if (depth <= 0 || text.length < 2) {
+            if (depth <= 0 || text.length < 2 || (depth < LIVE_CONFIG.spanObfuscationDepth && Math.random() < LIVE_CONFIG.probEarlyTermination) ) {
                 let processedTextHtml;
-
                 if (shouldBeVisible && Math.random() < LIVE_CONFIG.probSpaceToInvisible) {
                     const spaceIndices = [];
-                    for(let i = 0; i < text.length; i++) {
-                        if (text[i] === ' ') spaceIndices.push(i);
-                    }
-
+                    for(let i = 0; i < text.length; i++) { if (text[i] === ' ') spaceIndices.push(i); }
                     if (spaceIndices.length > 0) {
                         const indexToReplace = _getRandomElement(spaceIndices);
                         const invisibleSyllable = _generateRandomSyllable();
                         const invisibleColor = getInvisibleColorHex();
-                        const replacementHtml = `<span style="color:${invisibleColor};">${escapeHtml(invisibleSyllable)}</span>`;
-                        
-                        processedTextHtml = escapeHtml(text.substring(0, indexToReplace)) + replacementHtml + escapeHtml(text.substring(indexToReplace + 1));
-                    } else {
-                        processedTextHtml = escapeHtml(text);
-                    }
-                } else {
-                    processedTextHtml = escapeHtml(text);
-                }
+                        const replacementHtml = `<span style="color:${invisibleColor};">${invisibleSyllable}</span>`;
+                        processedTextHtml = text.substring(0, indexToReplace) + replacementHtml + text.substring(indexToReplace + 1);
+                    } else { processedTextHtml = text; }
+                } else { processedTextHtml = text; }
 
                 let useSizeTag = false;
                 if (shouldBeVisible === parentMakesVisible) {
-                    if (Math.random() > LIVE_CONFIG.probRedundantColor) {
-                        useSizeTag = true;
-                    }
+                    if (Math.random() > LIVE_CONFIG.probRedundantColor) { useSizeTag = true; }
                 }
 
                 if (useSizeTag) {
@@ -351,14 +267,12 @@
                 }
             }
 
-            // This is an INTERMEDIARY node.
             const nodeType = _getRandomElement(['size', 'colorShow', 'colorHide']);
-            
             const splitPoint = findCleanSplitPoint(text);
             const part1 = text.substring(0, splitPoint);
             const part2 = text.substring(splitPoint);
-
             let newParentMakesVisible;
+
             if (nodeType === 'size') {
                 newParentMakesVisible = parentMakesVisible;
                 const child1 = generateHierarchicalSpans(part1, shouldBeVisible, depth - 1, newParentMakesVisible);
@@ -366,10 +280,8 @@
                 return `<span class="size-node">${child1}${child2}</span>`;
             } else { 
                 newParentMakesVisible = (nodeType === 'colorShow');
-                
                 const child1 = generateHierarchicalSpans(part1, shouldBeVisible, depth - 1, newParentMakesVisible);
                 const child2 = generateHierarchicalSpans(part2, shouldBeVisible, depth - 1, newParentMakesVisible);
-
                 const color = newParentMakesVisible ? getVisibleColorHex() : getInvisibleColorHex();
                 return `<span style="color:${color};">${child1}${child2}</span>`;
             }
@@ -405,7 +317,6 @@
                 const isLineEmpty = line.trim() === '';
                 let processedContentBbcode = '';
 
-                // Case 3b: An empty line. c1 and c2 are always hidden.
                 if (isLineEmpty) {
                     let paddingContent = "";
                     let safetyBreak = 0;
@@ -416,24 +327,16 @@
                         paddingContent += _getRandomElement(phraseSource) + " ";
                         safetyBreak++;
                     }
-
-                    const splitPoint = findCleanSplitPoint(paddingContent);
-                    const c1_text = paddingContent.substring(0, splitPoint);
-                    const c2_text = paddingContent.substring(splitPoint);
-
-                    const c1_html = generateHierarchicalSpans(c1_text, false, LIVE_CONFIG.spanObfuscationDepth, true);
-                    const c2_html = generateHierarchicalSpans(c2_text, false, LIVE_CONFIG.spanObfuscationDepth, true);
-                    processedContentBbcode = htmlToBbcode(c1_html + c2_html);
-                
-                } else { // Non-empty lines
+                    const c1_html = generateHierarchicalSpans(paddingContent, false, LIVE_CONFIG.spanObfuscationDepth, true);
+                    processedContentBbcode = htmlToBbcode(c1_html);
+                } else {
                     const lineParts = line.split(/(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)/g).filter(Boolean);
                     const textToProcess = lineParts.filter(p => !p.match(/^(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)$/)).join('');
                     const needsPadding = getTextContentLength(textToProcess) < idealTextContentLength;
 
-                    // Case 3a: Non-empty line that needs padding. c1 is visible, c2 is hidden.
                     if (needsPadding) {
                         const c1_text = textToProcess;
-                        let c2_text = ""; // This will be the padding content.
+                        let c2_text = "";
                         let currentLength = getTextContentLength(c1_text);
                         let safetyBreak = 0;
                         while(currentLength < idealTextContentLength && safetyBreak < 50) {
@@ -445,54 +348,131 @@
                              currentLength += getTextContentLength(phrase);
                              safetyBreak++;
                         }
-                        
                         const c1_html = generateHierarchicalSpans(c1_text, true, LIVE_CONFIG.spanObfuscationDepth, true);
                         const c2_html = generateHierarchicalSpans(c2_text, false, LIVE_CONFIG.spanObfuscationDepth, true);
                         processedContentBbcode = htmlToBbcode(c1_html + c2_html);
-                    
-                    // Case 3c: Non-empty line, no padding. c1 and c2 are always visible.
                     } else {
-                        const splitPoint = findCleanSplitPoint(textToProcess);
-                        const c1_text = textToProcess.substring(0, splitPoint);
-                        const c2_text = textToProcess.substring(splitPoint);
-
-                        const c1_html = generateHierarchicalSpans(c1_text, true, LIVE_CONFIG.spanObfuscationDepth, true);
-                        const c2_html = generateHierarchicalSpans(c2_text, true, LIVE_CONFIG.spanObfuscationDepth, true);
-                        processedContentBbcode = htmlToBbcode(c1_html + c2_html);
+                        const c1_html = generateHierarchicalSpans(textToProcess, true, LIVE_CONFIG.spanObfuscationDepth, true);
+                        processedContentBbcode = htmlToBbcode(c1_html);
                     }
                 }
 
-                // --- Reconstruct the line ---
-                const finalLineParts = [];
-                if(isLineEmpty) {
-                    finalLineParts.push(processedContentBbcode);
-                } else {
+                let finalLine = processedContentBbcode;
+                if (!isLineEmpty) {
                     const lineParts = line.split(/(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)/g).filter(Boolean);
-                    let textPlaced = false;
-                    lineParts.forEach(part => {
-                        if (part.match(/^(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)$/)) {
-                            finalLineParts.push(part);
-                        } else {
-                            if (!textPlaced) {
-                                finalLineParts.push(processedContentBbcode);
-                                textPlaced = true;
-                            }
-                        }
-                    });
+                    const tagsOnly = lineParts.filter(p => p.match(/^(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)$/)).join('');
+                    finalLine = tagsOnly.replace(/\[\/[^\]]+\]/, processedContentBbcode + '$&');
                 }
-                
-                return finalLineParts.join('');
-            });
-            
-            let finalBbcode = processedLines.join('\n');
-            
-            originalSizeTags.forEach((value, key) => {
-                finalBbcode = finalBbcode.replace(new RegExp(key, 'g'), value);
+
+                // Re-insert placeholder tags
+                originalSizeTags.forEach((value, key) => {
+                    finalLine = finalLine.replace(new RegExp(key, 'g'), value);
+                });
+                return finalLine;
             });
 
-            document.getElementById('htmlPreview').innerHTML = bbcodeToHtml(finalBbcode);
-            document.getElementById('bbcodeOutput').value = finalBbcode;
-            document.getElementById('copyStatus').textContent = '';
+            const bbcodeParts = splitBbcodeByLine(processedLines);
+            displayFinalBbcode(bbcodeParts);
+        }
+        
+        // --- [NEW] Line-based Splitting Logic ---
+        function splitBbcodeByLine(lines) {
+            if (lines.join('\n').length < STATIC_CONFIG.MAX_BBCODE_LENGTH) {
+                return [lines.join('\n')];
+            }
+
+            const parts = [];
+            let currentPartLines = [];
+            let currentLength = 0;
+
+            lines.forEach(line => {
+                const lineLength = line.length + 1; // +1 for the newline char
+                if (currentLength + lineLength > STATIC_CONFIG.MAX_BBCODE_LENGTH && currentPartLines.length > 0) {
+                    parts.push(currentPartLines.join('\n'));
+                    currentPartLines = [line];
+                    currentLength = lineLength;
+                } else {
+                    currentPartLines.push(line);
+                    currentLength += lineLength;
+                }
+            });
+
+            if (currentPartLines.length > 0) {
+                parts.push(currentPartLines.join('\n'));
+            }
+
+            return parts;
+        }
+
+        // --- UI for Split Outputs ---
+        function displayFinalBbcode(bbcodeParts) {
+            const container = document.getElementById('bbcode-outputs-container');
+            container.innerHTML = ''; // Clear previous outputs
+
+            if (!bbcodeParts || bbcodeParts.length === 0 || (bbcodeParts.length === 1 && bbcodeParts[0] === '')) {
+                createBbcodeOutputUI("", 1, 1); // Show an empty box on init
+                return;
+            }
+
+            if (bbcodeParts.length === 1) {
+                createBbcodeOutputUI(bbcodeParts[0], 1, 1);
+            } else {
+                bbcodeParts.forEach((part, index) => {
+                    createBbcodeOutputUI(part, index + 1, bbcodeParts.length);
+                });
+            }
+        }
+
+        function createBbcodeOutputUI(bbcodePart, partNum, totalParts) {
+            const container = document.getElementById('bbcode-outputs-container');
+            const wrapper = document.createElement('div');
+            
+            if (totalParts > 1) {
+                const label = document.createElement('label');
+                label.textContent = `Bagian ${partNum} dari ${totalParts}:`;
+                label.className = "block text-sm font-medium text-gray-700 mb-1";
+                wrapper.appendChild(label);
+            }
+
+            const textarea = document.createElement('textarea');
+            textarea.id = `bbcodeOutput_${partNum}`;
+            textarea.rows = 8;
+            textarea.readOnly = true;
+            textarea.className = "shadow-sm block w-full sm:text-sm border-gray-300 rounded-md p-2 bg-gray-100 cursor-copy";
+            textarea.value = bbcodePart;
+            
+            const button = document.createElement('button');
+            button.textContent = totalParts > 1 ? `Salin Bagian ${partNum}` : "Salin BBCode";
+            button.className = "mt-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow text-sm";
+            
+            const statusSpan = document.createElement('span');
+            statusSpan.id = `copyStatus_${partNum}`;
+            statusSpan.className = "ml-2 text-sm text-green-600 font-semibold";
+
+            button.addEventListener('click', () => {
+                copyBbcode(textarea.id, statusSpan.id);
+            });
+
+            wrapper.appendChild(textarea);
+            wrapper.appendChild(button);
+            wrapper.appendChild(statusSpan);
+            container.appendChild(wrapper);
+        }
+
+        function copyBbcode(textareaId, statusId) {
+            const bbcodeOutput = document.getElementById(textareaId);
+            const copyStatus = document.getElementById(statusId);
+            document.querySelectorAll('[id^=copyStatus_]').forEach(s => s.textContent = '');
+            bbcodeOutput.select();
+            bbcodeOutput.setSelectionRange(0, 999999);
+            try {
+                const successful = document.execCommand('copy');
+                copyStatus.textContent = successful ? 'Berhasil disalin!' : 'Gagal menyalin.';
+            } catch (err) {
+                copyStatus.textContent = 'Gagal menyalin (error).';
+                console.error('Fallback: Gagal menyalin', err);
+            }
+            window.getSelection().removeAllRanges();
         }
 
         // --- HTML <-> BBCode CONVERSION ---
@@ -514,12 +494,8 @@
                          try {
                             const hexColor = _rgbToHex(...child.style.color.match(/\d+/g).map(Number));
                             bbcode += `[color=${hexColor}]${convertNodeToBbcode(child)}[/color]`;
-                        } catch (e) { 
-                            bbcode += convertNodeToBbcode(child);
-                        }
-                    } else {
-                        bbcode += convertNodeToBbcode(child);
-                    }
+                        } catch (e) { bbcode += convertNodeToBbcode(child); }
+                    } else { bbcode += convertNodeToBbcode(child); }
                 } else if (child.nodeType === Node.ELEMENT_NODE) {
                     bbcode += convertNodeToBbcode(child);
                 }
@@ -527,37 +503,9 @@
             return bbcode;
         }
 
-        function bbcodeToHtml(bbcode) {
-             let html = escapeHtml(bbcode);
-            html = html.replace(/\[color=(#[0-9A-F]{6})\]([\s\S]*?)\[\/color\]/gi, '<span style="color:$1">$2</span>');
-            html = html.replace(/\[size=4\]([\s\S]*?)\[\/size\]/gi, '$1'); 
-            html = html.replace(/\n/g, '<br>');
-            return html;
-        }
-
         // --- EVENT LISTENERS & LOAD ---
         document.getElementById('applyWatermarkBtn').addEventListener('click', applyWatermark);
         
-        document.getElementById('copyBbcodeBtn').addEventListener('click', () => {
-            const bbcodeOutput = document.getElementById('bbcodeOutput');
-            const copyStatus = document.getElementById('copyStatus');
-            bbcodeOutput.select();
-            bbcodeOutput.setSelectionRange(0, 99999);
-
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    copyStatus.textContent = 'Berhasil disalin!';
-                } else {
-                    copyStatus.textContent = 'Gagal menyalin.';
-                }
-            } catch (err) {
-                copyStatus.textContent = 'Gagal menyalin (error).';
-                console.error('Fallback: Oops, unable to copy', err);
-            }
-            window.getSelection().removeAllRanges();
-        });
-
         let debounceTimeout;
         const customPhrasesTextarea = document.getElementById('customPhrases');
 
@@ -574,14 +522,7 @@
                     if (Array.isArray(phrasesArray)) {
                         customPhrasesTextarea.value = phrasesArray.join('\n');
                     }
-                } catch (e) {
-                    console.error("Error parsing saved custom phrases:", e);
-                    if (typeof savedPhrases === 'string') {
-                        customPhrasesTextarea.value = savedPhrases;
-                    } else {
-                       localStorage.removeItem(STATIC_CONFIG.LOCALSTORAGE_KEY_CUSTOM_PHRASES);
-                    }
-                }
+                } catch (e) { console.error("Error parsing saved custom phrases:", e); }
             }
         }
 
@@ -593,6 +534,7 @@
         window.onload = () => {
             bindUI();
             loadCustomPhrases();
+            displayFinalBbcode([]);
         };
     </script>
 </body>
