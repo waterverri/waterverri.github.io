@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canary Trap Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        .word {
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+        .word:hover {
+            background-color: #dbeafe; /* blue-100 */
+        }
+        .word.selected {
+            background-color: #60a5fa; /* blue-400 */
+            color: white;
+        }
+        .word.varied {
+            background-color: #fef08a; /* yellow-200 */
+            border-bottom: 2px solid #facc15; /* yellow-400 */
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl bg-white rounded-xl shadow-2xl p-6 md:p-8 space-y-6">
+
+        <!-- Header -->
+        <header class="text-center border-b pb-4">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-900">Canary Trap Tool</h1>
+            <p id="headerSubtitle" class="text-slate-500 mt-2">Create unique document variations to identify information leaks.</p>
+        </header>
+
+        <!-- Page 0: Project ID -->
+        <div id="page0" class="page active fade-in">
+            <div class="space-y-4">
+                <h2 class="text-2xl font-semibold text-slate-700">Project Management</h2>
+                <p class="text-slate-500">Enter a unique Project ID to begin. If the ID exists, your project will be loaded. Otherwise, a new project will be created.</p>
+                <input type="text" id="projectIdInput" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., project-alpha-launch">
+                <button id="loadProjectBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105">
+                    Load or Create Project
+                </button>
+            </div>
+        </div>
+
+        <!-- Page 1: Original Text Input -->
+        <div id="page1" class="page fade-in">
+            <div class="space-y-4">
+                <h2 class="text-2xl font-semibold text-slate-700">Step 1: Enter Original Text</h2>
+                <p class="text-slate-500">Paste the sensitive text you want to protect. Your progress will be saved automatically.</p>
+                <textarea id="originalText" class="w-full h-64 p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Paste your secret memo, source code, or any sensitive text here..."></textarea>
+                <button id="processTextBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105">
+                    Proceed to Step 2 &rarr;
+                </button>
+            </div>
+        </div>
+
+        <!-- Page 2: Data Variation Input -->
+        <div id="page2" class="page fade-in">
+            <div class="space-y-4">
+                <h2 class="text-2xl font-semibold text-slate-700">Step 2: Define Word Variations</h2>
+                <p class="text-slate-500">Click a word to define variations. Changes are saved automatically.</p>
+                
+                <div id="wordSelectionContainer" class="w-full h-64 p-4 border border-slate-300 rounded-lg overflow-y-auto bg-slate-50"></div>
+
+                <div id="variationInputContainer" class="hidden space-y-2 p-4 bg-slate-100 rounded-lg">
+                    <label for="variationInput" class="font-semibold text-slate-600">Variations for "<span id="selectedWord" class="font-bold text-blue-600"></span>":</label>
+                    <input type="text" id="variationInput" class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., secret, confidential, private">
+                    <div class="flex justify-end">
+                         <button id="saveVariationBtn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition">Save Variation</button>
+                    </div>
+                </div>
+                
+                <div id="totalPermutationsDisplay" class="text-center text-slate-600 font-medium hidden"></div>
+
+                <div class="flex justify-between items-center pt-4">
+                     <button id="backToPage1Btn" class="bg-slate-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-600 transition">&larr; Back</button>
+                     <button id="finishBtn" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105">Finish & Proceed to Usage &rarr;</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 3: Usage & Verification -->
+        <div id="page3" class="page fade-in">
+             <div class="space-y-8">
+                <div class="space-y-4">
+                     <h2 class="text-2xl font-semibold text-slate-700">Generate a Trapped Document</h2>
+                     <p class="text-slate-500">Enter a recipient ID to generate their unique document. Each ID will be saved and mapped to a unique version.</p>
+                     <div class="flex flex-col sm:flex-row gap-4">
+                        <input type="text" id="recipientIdInput" class="flex-grow p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter Recipient ID (e.g., Alice)">
+                        <button id="generateDocBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Generate Document</button>
+                     </div>
+                     <textarea id="generatedDoc" class="w-full h-48 p-4 border border-slate-300 rounded-lg bg-slate-50" readonly placeholder="Your unique document will appear here..."></textarea>
+                     <button id="copyDocBtn" class="w-full sm:w-auto bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition">Copy to Clipboard</button>
+                </div>
+                
+                <div class="space-y-4 pt-8 border-t">
+                    <h2 class="text-2xl font-semibold text-slate-700">Identify a Leaker</h2>
+                    <p class="text-slate-500">Paste a leaked document below. The tool will check its records to find the original recipient.</p>
+                    <textarea id="leakedDocInput" class="w-full h-48 p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Paste the leaked document here..."></textarea>
+                    <button id="findLeakerBtn" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition">Find the Leaker</button>
+                    <div id="leakerResult" class="text-center p-4 bg-slate-100 rounded-lg text-lg font-semibold hidden"></div>
+                </div>
+
+                <div class="pt-4 text-center">
+                    <button id="startOverBtn" class="text-sm text-slate-500 hover:text-red-600 hover:underline">Switch or Delete Project</button>
+                </div>
+             </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL STATE & CONFIG ---
+        let state = {};
+        const DEBOUNCE_DELAY = 500;
+        let debouncedSave = () => {};
+
+        // --- DOM ELEMENTS ---
+        const pages = {
+            page0: document.getElementById('page0'),
+            page1: document.getElementById('page1'),
+            page2: document.getElementById('page2'),
+            page3: document.getElementById('page3')
+        };
+        const headerSubtitle = document.getElementById('headerSubtitle');
+        const projectIdInput = document.getElementById('projectIdInput');
+        const loadProjectBtn = document.getElementById('loadProjectBtn');
+        const originalTextInput = document.getElementById('originalText');
+        const processTextBtn = document.getElementById('processTextBtn');
+        const wordSelectionContainer = document.getElementById('wordSelectionContainer');
+        const variationInputContainer = document.getElementById('variationInputContainer');
+        const selectedWordSpan = document.getElementById('selectedWord');
+        const variationInput = document.getElementById('variationInput');
+        const saveVariationBtn = document.getElementById('saveVariationBtn');
+        const totalPermutationsDisplay = document.getElementById('totalPermutationsDisplay');
+        const backToPage1Btn = document.getElementById('backToPage1Btn');
+        const finishBtn = document.getElementById('finishBtn');
+        const recipientIdInput = document.getElementById('recipientIdInput');
+        const generateDocBtn = document.getElementById('generateDocBtn');
+        const generatedDocTextarea = document.getElementById('generatedDoc');
+        const copyDocBtn = document.getElementById('copyDocBtn');
+        const leakedDocInput = document.getElementById('leakedDocInput');
+        const findLeakerBtn = document.getElementById('findLeakerBtn');
+        const leakerResult = document.getElementById('leakerResult');
+        const startOverBtn = document.getElementById('startOverBtn');
+
+        // --- UTILITY FUNCTIONS ---
+        const debounce = (func, delay) => {
+            let timeoutId;
+            return (...args) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    func.apply(this, args);
+                }, delay);
+            };
+        };
+
+        const showPage = (pageId) => {
+            Object.values(pages).forEach(page => page.classList.remove('active'));
+            if(pages[pageId]) pages[pageId].classList.add('active');
+        };
+
+        const hashToBigInt = (str) => {
+            let hash = 0n;
+            if (str.length === 0) return hash;
+            for (let i = 0; i < str.length; i++) {
+                hash = (hash << 5n) - hash + BigInt(str.charCodeAt(i));
+                hash &= hash; 
+            }
+            return hash < 0n ? -hash : hash;
+        };
+
+        // --- STATE & STORAGE MANAGEMENT ---
+        const saveState = () => {
+            if (!state.projectId) return;
+            try {
+                const stateToSave = {
+                    ...state,
+                    variations: Object.fromEntries(state.variations) // Convert Map to object
+                };
+                localStorage.setItem(`canary-trap-${state.projectId}`, JSON.stringify(stateToSave));
+                console.log(`Project ${state.projectId} saved.`);
+            } catch (e) {
+                console.error("Failed to save state:", e);
+                alert("Error: Could not save project data. Your browser's storage might be full.");
+            }
+        };
+        
+        const resetState = () => {
+             state = {
+                projectId: null,
+                originalText: '',
+                variations: new Map(),
+                recipientMap: {} // { recipientId: permutationNumberString }
+            };
+        };
+        
+        const loadProject = (projectId) => {
+            const savedData = localStorage.getItem(`canary-trap-${projectId}`);
+            resetState();
+            state.projectId = projectId;
+            headerSubtitle.textContent = `Project: ${projectId}`;
+            
+            if (savedData) {
+                const loadedState = JSON.parse(savedData);
+                state.originalText = loadedState.originalText || '';
+                state.variations = new Map(Object.entries(loadedState.variations || {}));
+                state.recipientMap = loadedState.recipientMap || {};
+                
+                originalTextInput.value = state.originalText;
+                processOriginalText(state.originalText);
+                updateUIFromVariations();
+                showPage('page3');
+
+            } else {
+                showPage('page1');
+            }
+            debouncedSave = debounce(saveState, DEBOUNCE_DELAY);
+        };
+        
+        // --- UI INITIALIZATION & EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', () => showPage('page0'));
+
+        loadProjectBtn.addEventListener('click', () => {
+            const projectId = projectIdInput.value.trim();
+            if (!projectId) {
+                alert("Please enter a Project ID.");
+                return;
+            }
+            loadProject(projectId);
+        });
+        
+        originalTextInput.addEventListener('input', () => {
+           state.originalText = originalTextInput.value;
+           debouncedSave();
+        });
+
+        processTextBtn.addEventListener('click', () => {
+            if (!state.originalText.trim()) { alert('Please enter some text first.'); return; }
+            processOriginalText(state.originalText);
+            showPage('page2');
+        });
+
+        backToPage1Btn.addEventListener('click', () => showPage('page1'));
+
+        finishBtn.addEventListener('click', () => showPage('page3'));
+
+        startOverBtn.addEventListener('click', () => {
+            const action = prompt("Type 'SWITCH' to go to the project selection screen, or 'DELETE' to permanently delete this project.");
+            if (action === 'DELETE') {
+                 if (confirm(`Are you sure you want to permanently delete project "${state.projectId}"? This cannot be undone.`)) {
+                     localStorage.removeItem(`canary-trap-${state.projectId}`);
+                     window.location.reload();
+                 }
+            } else if (action === 'SWITCH') {
+                 window.location.reload();
+            }
+        });
+
+        // --- PAGE 2: VARIATION LOGIC ---
+        function processOriginalText(text) {
+            originalWords = text.split(/(\s+)/);
+            wordSelectionContainer.innerHTML = ''; 
+            originalWords.forEach((word, index) => {
+                if (word.trim() === '') {
+                    wordSelectionContainer.appendChild(document.createTextNode(word));
+                    return;
+                }
+                const wordSpan = document.createElement('span');
+                wordSpan.textContent = word;
+                wordSpan.classList.add('word');
+                wordSpan.dataset.index = index;
+                wordSpan.addEventListener('click', handleWordClick);
+                wordSelectionContainer.appendChild(wordSpan);
+            });
+            updateTotalPermutationsDisplay();
+        }
+        
+        function updateUIFromVariations() {
+            wordSelectionContainer.querySelectorAll('.word.varied').forEach(w => w.classList.remove('varied'));
+            for (const index of state.variations.keys()) {
+                const wordSpan = wordSelectionContainer.querySelector(`.word[data-index='${index}']`);
+                if (wordSpan) wordSpan.classList.add('varied');
+            }
+            updateTotalPermutationsDisplay();
+        }
+
+        function handleWordClick(event) {
+            const currentlySelected = wordSelectionContainer.querySelector('.word.selected');
+            if (currentlySelected) currentlySelected.classList.remove('selected');
+
+            const clickedWordSpan = event.target;
+            selectedWordIndex = parseInt(clickedWordSpan.dataset.index);
+            clickedWordSpan.classList.add('selected');
+
+            selectedWordSpan.textContent = clickedWordSpan.textContent;
+            variationInputContainer.classList.remove('hidden');
+
+            variationInput.value = state.variations.has(selectedWordIndex) ? state.variations.get(selectedWordIndex).join(', ') : '';
+            variationInput.focus();
+        }
+
+        saveVariationBtn.addEventListener('click', () => {
+            if (selectedWordIndex === -1) return;
+            const variationText = variationInput.value.trim();
+            if (variationText) {
+                const variationArray = variationText.split(',').map(v => v.trim()).filter(Boolean);
+                state.variations.set(selectedWordIndex, variationArray);
+            } else {
+                state.variations.delete(selectedWordIndex);
+            }
+            updateUIFromVariations();
+            debouncedSave();
+            alert('Variation saved!');
+        });
+        
+        function updateTotalPermutationsDisplay() {
+            const total = getTotalPermutations();
+            if (total > 1n) {
+                totalPermutationsDisplay.textContent = `Total unique document variations: ${total.toLocaleString()}`;
+                totalPermutationsDisplay.classList.remove('hidden');
+            } else {
+                totalPermutationsDisplay.classList.add('hidden');
+            }
+        }
+
+        // --- PAGE 3: GENERATION & VERIFICATION LOGIC ---
+        const getVariationData = () => Array.from(state.variations.keys()).sort((a, b) => a - b).map(index => ({ index, options: state.variations.get(index), count: BigInt(state.variations.get(index).length) }));
+        const getTotalPermutations = () => {
+            const variationData = getVariationData();
+            return variationData.length === 0 ? 0n : variationData.reduce((acc, curr) => acc * curr.count, 1n);
+        };
+
+        function generateDocumentByPermutationNumber(permNumber) {
+            const variationData = getVariationData();
+            const chosenVariations = new Map();
+            let pNum = BigInt(permNumber);
+
+            for (const item of variationData) {
+                const choiceIndex = Number(pNum % item.count);
+                chosenVariations.set(item.index, item.options[choiceIndex]);
+                pNum /= item.count;
+            }
+
+            return originalWords.map((word, index) => chosenVariations.has(index) ? chosenVariations.get(index) : word).join('');
+        }
+
+        function getPermutationNumberFromDoc(leakedText) {
+            const leakedWords = leakedText.split(/(\s+)/);
+            if (leakedWords.length !== originalWords.length) return -1n;
+
+            const variationData = getVariationData();
+            if (variationData.length === 0) return 0n;
+
+            let leakedPermutationNumber = 0n;
+            let multiplier = 1n;
+
+            for (const item of variationData) {
+                const leakedWord = leakedWords[item.index];
+                const choiceIndex = item.options.indexOf(leakedWord);
+                if (choiceIndex === -1) return -1n;
+                leakedPermutationNumber += BigInt(choiceIndex) * multiplier;
+                multiplier *= item.count;
+            }
+            return leakedPermutationNumber;
+        }
+
+        generateDocBtn.addEventListener('click', () => {
+            const recipientId = recipientIdInput.value.trim();
+            if (!recipientId) { alert('Please provide a recipient ID.'); return; }
+            
+            const totalPermutations = getTotalPermutations();
+            if (totalPermutations < 1n) {
+                alert("No variations defined. Cannot generate a unique document.");
+                generatedDocTextarea.value = state.originalText;
+                return;
+            }
+            
+            // Check if ID already exists
+            if (state.recipientMap[recipientId]) {
+                 const existingPermNum = state.recipientMap[recipientId];
+                 generatedDocTextarea.value = generateDocumentByPermutationNumber(existingPermNum);
+                 alert(`This ID already exists. Showing their previously generated document.`);
+                 return;
+            }
+
+            // Handle collisions
+            let idHash = hashToBigInt(recipientId);
+            let permutationNumber = idHash % totalPermutations;
+            const usedPermutationNumbers = new Set(Object.values(state.recipientMap));
+
+            let attempts = 0;
+            while (usedPermutationNumbers.has(permutationNumber.toString())) {
+                permutationNumber = (permutationNumber + 1n) % totalPermutations;
+                attempts++;
+                if (BigInt(attempts) >= totalPermutations) {
+                     alert("Error: All possible document variations have been assigned!");
+                     return;
+                }
+            }
+
+            state.recipientMap[recipientId] = permutationNumber.toString();
+            debouncedSave();
+
+            generatedDocTextarea.value = generateDocumentByPermutationNumber(permutationNumber);
+            alert(`Generated a unique document for ${recipientId}.`);
+        });
+
+        copyDocBtn.addEventListener('click', () => {
+            if (!generatedDocTextarea.value) { alert('Nothing to copy.'); return; }
+            generatedDocTextarea.select();
+            generatedDocTextarea.setSelectionRange(0, 99999);
+            try { document.execCommand('copy'); alert('Copied to clipboard!'); } 
+            catch (err) { alert('Failed to copy text.'); }
+            window.getSelection().removeAllRanges();
+        });
+
+        findLeakerBtn.addEventListener('click', () => {
+            const leakedText = leakedDocInput.value.trim();
+            if (!leakedText) { alert('Please paste the leaked document text.'); return; }
+
+            const leakedPermutationNumber = getPermutationNumberFromDoc(leakedText);
+            leakerResult.classList.remove('hidden');
+
+            if (leakedPermutationNumber === -1n) {
+                leakerResult.textContent = 'Could not identify. The document may have been altered or does not match this project\'s data.';
+                leakerResult.className = 'text-center p-4 rounded-lg text-lg font-semibold bg-red-200 text-red-800';
+                return;
+            }
+
+            const invertedMap = Object.fromEntries(Object.entries(state.recipientMap).map(([id, num]) => [num, id]));
+            const leakerId = invertedMap[leakedPermutationNumber.toString()];
+            
+            if (leakerId) {
+                leakerResult.textContent = `Leak source identified: ${leakerId}`;
+                leakerResult.className = 'text-center p-4 rounded-lg text-lg font-semibold bg-green-200 text-green-800';
+            } else {
+                leakerResult.textContent = 'Document is a valid variation, but the recipient ID was not found in this project\'s records.';
+                leakerResult.className = 'text-center p-4 rounded-lg text-lg font-semibold bg-yellow-200 text-yellow-800';
+            }
+        });
+    </script>
+</body>
+</html>
