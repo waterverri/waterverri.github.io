@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Waterverri's Advanced BBCode Text Watermarker v2.8 (Bugfix)</title>
+    <title>Waterverri's Advanced BBCode Text Watermarker v2.9.0 (Tag Preservation Bugfix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
         .container { max-width: 1200px; background-color: #ffffff; }
@@ -41,7 +42,7 @@
 <body class="bg-gray-100">
     <div class="container mx-auto p-4 md:p-8 my-8 bg-white rounded-lg shadow-2xl">
         <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 text-gray-800">Waterverri's Advanced Text Watermarking Tool</h1>
-        <p class="text-center text-gray-600 mb-8">v2.8.4: Perbaikan bug kritikal hilangnya baris.</p>
+        <p class="text-center text-gray-600 mb-8">v2.9.0: Perbaikan bug kritikal untuk menjaga semua tag BBCode asli.</p>
 
         <div id="config-container" class="mb-8">
             <fieldset>
@@ -57,7 +58,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
                 <label for="originalText" class="block text-sm font-medium text-gray-700 mb-1">Teks Asli (dengan BBCode):</label>
-                <textarea id="originalText" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 bg-gray-50" placeholder="[b]Contoh:[/b] Masukkan teks [i]BBCode[/i] Anda dengan [size=7]ukuran kustom[/size] di sini."></textarea>
+                <textarea id="originalText" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 bg-gray-50" placeholder="[b]Contoh:[/b] Masukkan [color=red]teks[/color] [i]BBCode[/i] Anda dengan [size=7]ukuran kustom[/size] di sini. Tag akan dijaga."></textarea>
             </div>
             <div>
                 <label for="customPhrases" class="block text-sm font-medium text-gray-700 mb-1">Frasa Tak Terlihat Kustom (satu per baris):</label>
@@ -97,10 +98,10 @@
             BACKGROUND_COLOR: { r: 255, g: 252, b: 204 },
             TEXT_COLOR_BASE: { r: 28, g: 30, b: 33 },
             DEFAULT_INVISIBLE_PHRASES: ["Konten ini dirancang agar sulit dideteksi.", "Watermarking membantu melindungi karya asli.", "Rubah cokelat cepat melompati anjing malas."],
-            LOCALSTORAGE_KEY_CUSTOM_PHRASES: 'phpbbWatermarkerCustomPhrases',
+            LOCALSTORAGE_KEY_CUSTOM_PHRASES: 'phpbbWatermarkerCustomPhrases_v2',
             MINIMAL_DEFAULT_INVISIBLE_CHAR: "·",
             DEBOUNCE_DELAY: 500,
-            MAX_BBCODE_LENGTH: 99999,
+            MAX_BBCODE_LENGTH: 60000,
         };
 
         // --- UI & HELPERS ---
@@ -240,8 +241,10 @@
 
         // --- ADVANCED OBFUSCATION ---
         function generateHierarchicalSpans(text, shouldBeVisible, depth, parentMakesVisible) {
+            // Base case: Stop recursion if depth is 0, text is too short, or by random chance.
             if (depth <= 0 || text.length < 2 || (depth < LIVE_CONFIG.spanObfuscationDepth && Math.random() < LIVE_CONFIG.probEarlyTermination) ) {
-                let processedTextHtml;
+                let processedTextHtml = text;
+                // Optionally replace a space with an invisible syllable in visible text
                 if (shouldBeVisible && Math.random() < LIVE_CONFIG.probSpaceToInvisible) {
                     const spaceIndices = [];
                     for(let i = 0; i < text.length; i++) { if (text[i] === ' ') spaceIndices.push(i); }
@@ -251,11 +254,12 @@
                         const invisibleColor = getInvisibleColorHex();
                         const replacementHtml = `<span style="color:${invisibleColor};">${invisibleSyllable}</span>`;
                         processedTextHtml = text.substring(0, indexToReplace) + replacementHtml + text.substring(indexToReplace + 1);
-                    } else { processedTextHtml = text; }
-                } else { processedTextHtml = text; }
+                    }
+                }
 
+                // Decide whether to use a color tag or a size tag for the final output
                 let useSizeTag = false;
-                if (shouldBeVisible === parentMakesVisible) {
+                if (shouldBeVisible === parentMakesVisible) { // If visibility is already correct
                     if (Math.random() > LIVE_CONFIG.probRedundantColor) { useSizeTag = true; }
                 }
 
@@ -266,7 +270,8 @@
                     return `<span style="color:${color};">${processedTextHtml}</span>`;
                 }
             }
-
+            
+            // Recursive step: split text and generate child spans
             const nodeType = _getRandomElement(['size', 'colorShow', 'colorHide']);
             const splitPoint = findCleanSplitPoint(text);
             const part1 = text.substring(0, splitPoint);
@@ -287,20 +292,12 @@
             }
         }
         
-        // --- MAIN APPLICATION FLOW ---
+        // --- MAIN APPLICATION FLOW (BUGFIXED)---
         function applyWatermark() {
-            let originalBbcode = document.getElementById('originalText').value;
-            const originalSizeTags = new Map();
-            let placeholderIndex = 0;
-            
-            originalBbcode = originalBbcode.replace(/\[size=[\d]+\][\s\S]*?\[\/size\]/gi, (match) => {
-                const placeholder = `__SIZE_PLACEHOLDER_${placeholderIndex}__`;
-                originalSizeTags.set(placeholder, match);
-                placeholderIndex++;
-                return placeholder;
-            });
-
+            const originalBbcode = document.getElementById('originalText').value;
             const originalLines = originalBbcode.split('\n');
+
+            // Calculate ideal line length based on original text
             let totalTextContentLength = 0;
             let nonEmptyLinesCount = 0;
             originalLines.forEach(line => {
@@ -310,14 +307,14 @@
                     nonEmptyLinesCount++;
                 }
             });
-            
             const idealTextContentLength = ((nonEmptyLinesCount > 0) ? Math.round(totalTextContentLength / nonEmptyLinesCount) : 30) * LIVE_CONFIG.idealLineLengthMultiplier;
 
+            // Process each line individually
             const processedLines = originalLines.map(line => {
                 const isLineEmpty = line.trim() === '';
-                let processedContentBbcode = '';
 
                 if (isLineEmpty) {
+                    // Pad empty lines with invisible content
                     let paddingContent = "";
                     let safetyBreak = 0;
                     while (getTextContentLength(paddingContent) < idealTextContentLength && safetyBreak < 50) {
@@ -327,77 +324,62 @@
                         paddingContent += _getRandomElement(phraseSource) + " ";
                         safetyBreak++;
                     }
-                    const c1_html = generateHierarchicalSpans(paddingContent, false, LIVE_CONFIG.spanObfuscationDepth, true);
-                    processedContentBbcode = htmlToBbcode(c1_html);
-                } else {
-                    const lineParts = line.split(/(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)/g).filter(Boolean);
-                    const textToProcess = lineParts.filter(p => !p.match(/^(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)$/)).join('');
-                    const needsPadding = getTextContentLength(textToProcess) < idealTextContentLength;
+                    if (paddingContent) {
+                        const html = generateHierarchicalSpans(paddingContent, false, LIVE_CONFIG.spanObfuscationDepth, true);
+                        return htmlToBbcode(html);
+                    }
+                    return "";
+                }
 
-                    if (needsPadding) {
-                        const c1_text = textToProcess;
-                        let c2_text = "";
-                        let currentLength = getTextContentLength(c1_text);
-                        let safetyBreak = 0;
-                        while(currentLength < idealTextContentLength && safetyBreak < 50) {
-                             const customPhrases = document.getElementById('customPhrases').value.split('\n').map(p => p.trim()).filter(Boolean);
-                             const phraseSource = customPhrases.length > 0 ? customPhrases : STATIC_CONFIG.DEFAULT_INVISIBLE_PHRASES;
-                             if (phraseSource.length === 0) break;
-                             const phrase = _getRandomElement(phraseSource) + " ";
-                             c2_text += phrase;
-                             currentLength += getTextContentLength(phrase);
-                             safetyBreak++;
-                        }
-                        const c1_html = generateHierarchicalSpans(c1_text, true, LIVE_CONFIG.spanObfuscationDepth, true);
-                        const c2_html = generateHierarchicalSpans(c2_text, false, LIVE_CONFIG.spanObfuscationDepth, true);
-                        processedContentBbcode = htmlToBbcode(c1_html + c2_html);
+                // **BUGFIX**: Tokenize the line to separate tags from text
+                const tokens = line.split(/(\[.*?\])/g).filter(Boolean);
+                let processedLineBbcode = "";
+                let originalLineText = "";
+
+                tokens.forEach(token => {
+                    if (token.match(/^\[.*?\]$/)) {
+                        // It's a tag, preserve it as is
+                        processedLineBbcode += token;
                     } else {
-                        const c1_html = generateHierarchicalSpans(textToProcess, true, LIVE_CONFIG.spanObfuscationDepth, true);
-                        processedContentBbcode = htmlToBbcode(c1_html);
-                    }
-                }
-
-                // --- [BUGFIX] Correct line reconstruction ---
-                const finalLineParts = [];
-                if(isLineEmpty) {
-                    finalLineParts.push(processedContentBbcode);
-                } else {
-                    const lineParts = line.split(/(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)/g).filter(Boolean);
-                    let textPlaced = false;
-                    lineParts.forEach(part => {
-                        if (part.match(/^(\[.+?\]|__SIZE_PLACEHOLDER_\d+__)$/)) {
-                            finalLineParts.push(part); // Keep tag
+                        // It's a text node, process it with watermarking
+                        originalLineText += token;
+                        if (token.trim() !== '') {
+                             const watermarkedHtml = generateHierarchicalSpans(token, true, LIVE_CONFIG.spanObfuscationDepth, true);
+                             processedLineBbcode += htmlToBbcode(watermarkedHtml);
                         } else {
-                            if (!textPlaced && part.trim() !== '') { // Only place content once for non-empty text parts
-                                finalLineParts.push(processedContentBbcode);
-                                textPlaced = true;
-                            } else if (textPlaced) {
-                                // Do nothing, all text content has been replaced by the single processed block
-                            } else {
-                                finalLineParts.push(part); // Preserve whitespace-only parts if they come before main text
-                            }
+                             processedLineBbcode += token; // Preserve whitespace between tags
                         }
-                    });
-                     if (!textPlaced) { // Handle cases where a line might only contain tags and no text
-                        finalLineParts.push(processedContentBbcode);
                     }
-                }
-                
-                let finalLine = finalLineParts.join('');
-
-                originalSizeTags.forEach((value, key) => {
-                    finalLine = finalLine.replace(new RegExp(key, 'g'), value);
                 });
 
-                return finalLine;
+                // Add padding to the processed line if it's shorter than the ideal length
+                const currentTextLength = getTextContentLength(originalLineText);
+                if (currentTextLength < idealTextContentLength) {
+                    let paddingNeeded = idealTextContentLength - currentTextLength;
+                    let paddingContent = "";
+                    let safetyBreak = 0;
+                    while(getTextContentLength(paddingContent) < paddingNeeded && safetyBreak < 50) {
+                        const customPhrases = document.getElementById('customPhrases').value.split('\n').map(p => p.trim()).filter(Boolean);
+                        const phraseSource = customPhrases.length > 0 ? customPhrases : STATIC_CONFIG.DEFAULT_INVISIBLE_PHRASES;
+                        if (phraseSource.length === 0) break;
+                        const phrase = _getRandomElement(phraseSource) + " ";
+                        paddingContent += phrase;
+                        safetyBreak++;
+                    }
+                    if (paddingContent) {
+                        const paddingHtml = generateHierarchicalSpans(paddingContent, false, LIVE_CONFIG.spanObfuscationDepth, true);
+                        processedLineBbcode += htmlToBbcode(paddingHtml);
+                    }
+                }
+                return processedLineBbcode;
             });
 
-            const bbcodeParts = splitBbcodeByLine(processedLines);
+            const bbcodeParts = splitBbcodeByLimit(processedLines);
             displayFinalBbcode(bbcodeParts);
         }
         
-        // --- Line-based Splitting Logic ---
-        function splitBbcodeByLine(lines) {
+        // --- Splitting Logic ---
+        function splitBbcodeByLimit(lines) {
             const joined = lines.join('\n');
             if (joined.length < STATIC_CONFIG.MAX_BBCODE_LENGTH) {
                 return [joined];
@@ -422,7 +404,6 @@
             if (currentPartLines.length > 0) {
                 parts.push(currentPartLines.join('\n'));
             }
-
             return parts;
         }
 
