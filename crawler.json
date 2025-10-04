@@ -2,7 +2,9 @@
   "BASE_URL": "https://www.semprot.com/threads/",
   "THREADS": {
     "KWNS": "kedua-wanitaku-no-sara.1551062",
-    "TML": "trauma-masa-lalu-kini-dan-nanti-story-of-alisa.1552897"
+    "TML": "trauma-masa-lalu-kini-dan-nanti-story-of-alisa.1552897",
+    "DIM": "trauma-masa-lalu-kini-dan-nanti-story-of-dimas.1547779",
+    "OG": "trauma-masa-lalu-kini-dan-nanti-story-of-ratna.1544108"
   },
   "urlParts": [
     ["KWNS", null],
@@ -63,6 +65,14 @@
     ["TML", "1912712622"],
     ["KWNS", "1912732375"],
     ["KWNS", "1912936820"],
-    ["TML", "1912957717"]
+    ["TML", "1912957717"],
+    ["DIM", null],
+    ["OG", null],
+    ["DIM", "1911604301"],
+    ["DIM", "1911604301"],
+    ["DIM", "1911723379"],
+    ["DIM", "1912045801"],
+    ["DIM", "1912351595"],
+    ["OG", "1911415195"]
   ]
 }
